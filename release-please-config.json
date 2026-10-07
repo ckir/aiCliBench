@@ -1,0 +1,65 @@
+{
+  "separate-pull-requests": true,
+  "packages": {
+    "packages/core": {
+      "package-name": "ai-core",
+      "release-type": "python"
+    },
+    "packages/schemas": {
+      "package-name": "ai-schemas",
+      "release-type": "python"
+    },
+    "packages/ai": {
+      "package-name": "ai-runtime",
+      "release-type": "python"
+    },
+    "packages/agents": {
+      "package-name": "ai-agents",
+      "release-type": "python"
+    },
+    "packages/plugins-sdk": {
+      "package-name": "ai-plugins-sdk",
+      "release-type": "python"
+    },
+    "packages/mcp-core": {
+      "package-name": "ai-mcp-core",
+      "release-type": "python"
+    },
+    "packages/mcp-client": {
+      "package-name": "ai-mcp-client",
+      "release-type": "python"
+    },
+    "packages/mcp-server": {
+      "package-name": "ai-mcp-server",
+      "release-type": "python"
+    },
+    "packages/mcp-testing": {
+      "package-name": "ai-mcp-testing",
+      "release-type": "python"
+    },
+    "packages/evals": {
+      "package-name": "ai-evals",
+      "release-type": "python"
+    },
+    "packages/cli": {
+      "package-name": "ai-cli",
+      "release-type": "python"
+    },
+    "packages/plugins/example": {
+      "package-name": "ai-plugin-example",
+      "release-type": "python"
+    },
+    "packages/integrations/openai": {
+      "package-name": "ai-integration-openai",
+      "release-type": "python"
+    },
+    "packages/services/api": {
+      "package-name": "ai-service-api",
+      "release-type": "python"
+    },
+    "packages/services/worker": {
+      "package-name": "ai-service-worker",
+      "release-type": "python"
+    }
+  }
+}

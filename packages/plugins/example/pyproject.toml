@@ -1,0 +1,23 @@
+[project]
+name = "ai-plugin-example"
+version = "0.1.0"
+description = "Example plugin demonstrating plugin boundaries"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-plugins-sdk",
+  "ai-schemas",
+  "ai-core",
+  "pydantic>=2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_plugin_example"]
+
+[tool.uv.sources]
+ai-plugins-sdk = { workspace = true }
+ai-schemas = { workspace = true }
+ai-core = { workspace = true }

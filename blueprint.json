@@ -1,0 +1,32 @@
+{
+  "blueprint_version": "2.0",
+  "focus": [
+    "ai",
+    "agents",
+    "mcp",
+    "plugins",
+    "integrations",
+    "evals"
+  ],
+  "package_manager": "uv",
+  "workspace": "uv",
+  "quality": [
+    "ruff",
+    "ty",
+    "pytest"
+  ],
+  "hooks": "lefthook",
+  "commits": "conventional-commits",
+  "releases": "release-please-manifest",
+  "ci": "github-actions",
+  "publishing": "pypi-trusted-publishing-oidc",
+  "security": [
+    "dependabot",
+    "codeql",
+    "dependency-review",
+    "zizmor",
+    "sha-pinned-actions"
+  ],
+  "agent_entrypoint": "AGENTS.md",
+  "implementation_plan": "AGENT_HANDOFF.md"
+}

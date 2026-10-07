@@ -1,0 +1,20 @@
+[project]
+name = "ai-plugins-sdk"
+version = "0.1.0"
+description = "SDK for AI plugins and tools"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-core",
+  "ai-schemas",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_plugins_sdk"]
+
+[tool.uv.sources]
+ai-core = { workspace = true }
+ai-schemas = { workspace = true }

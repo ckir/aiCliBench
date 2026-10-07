@@ -1,0 +1,35 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "30 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v6 # Pin to full SHA in production.
+      - uses: github/codeql-action/init@v4 # Pin to full SHA in production.
+        with:
+          languages: python
+      - uses: github/codeql-action/analyze@v4 # Pin to full SHA in production.
+
+  zizmor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6 # Pin to full SHA in production.
+      # Install and run zizmor here; pin the action/tool version.
+      - name: Workflow security audit
+        run: |
+          echo "Configure zizmor for .github/workflows before enabling as required."

@@ -1,0 +1,17 @@
+{
+  "packages/core": "0.1.0",
+  "packages/schemas": "0.1.0",
+  "packages/ai": "0.1.0",
+  "packages/agents": "0.1.0",
+  "packages/plugins-sdk": "0.1.0",
+  "packages/mcp-core": "0.1.0",
+  "packages/mcp-client": "0.1.0",
+  "packages/mcp-server": "0.1.0",
+  "packages/mcp-testing": "0.1.0",
+  "packages/evals": "0.1.0",
+  "packages/cli": "0.1.0",
+  "packages/plugins/example": "0.1.0",
+  "packages/integrations/openai": "0.1.0",
+  "packages/services/api": "0.1.0",
+  "packages/services/worker": "0.1.0"
+}

@@ -1,0 +1,24 @@
+name: Evals
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6 # Pin to full SHA in production.
+      - uses: astral-sh/setup-uv@v7 # Pin to full SHA in production.
+        with:
+          enable-cache: true
+      - run: uv python install 3.13
+      - run: uv sync --locked
+      - run: uv run pytest -m eval
+
+  # Add live-provider eval jobs only when credentials and spend limits are configured.
+  # Never expose provider secrets to arbitrary pull requests.
