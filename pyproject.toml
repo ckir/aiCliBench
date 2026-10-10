@@ -4,7 +4,8 @@ version = "0.0.0"
 description = "AI, MCP, plugin, and agent monorepo"
 requires-python = ">=3.12"
 readme = "README.md"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE*"]
 dependencies = [
   "ai-core",
   "ai-schemas",
@@ -13,11 +14,14 @@ dependencies = [
   "ai-plugins-sdk",
   "ai-plugin-example",
   "ai-integration-openai",
+  "ai-integration-claude-code",
+  "ai-integration-antigravity",
   "ai-mcp-core",
   "ai-mcp-server",
   "ai-mcp-client",
   "ai-mcp-testing",
   "ai-evals",
+  "ai-benchmark",
   "ai-cli",
   "ai-service-api",
   "ai-service-worker",
@@ -34,11 +38,14 @@ ai-agents = { workspace = true }
 ai-plugins-sdk = { workspace = true }
 ai-plugin-example = { workspace = true }
 ai-integration-openai = { workspace = true }
+ai-integration-claude-code = { workspace = true }
+ai-integration-antigravity = { workspace = true }
 ai-mcp-core = { workspace = true }
 ai-mcp-server = { workspace = true }
 ai-mcp-client = { workspace = true }
 ai-mcp-testing = { workspace = true }
 ai-evals = { workspace = true }
+ai-benchmark = { workspace = true }
 ai-cli = { workspace = true }
 ai-service-api = { workspace = true }
 ai-service-worker = { workspace = true }
@@ -88,6 +95,9 @@ ignore = []
 "packages/plugins/*/tests/*.py" = ["S101"]
 "packages/integrations/*/tests/*.py" = ["S101"]
 "packages/services/*/tests/*.py" = ["S101"]
+"tasks/**/tests/*.py" = ["S101"]
+"tasks/**/source/*.py" = ["S101"]
+"tasks/**/evaluator/**/*.py" = ["S101"]
 
 [tool.ruff.format]
 quote-style = "double"

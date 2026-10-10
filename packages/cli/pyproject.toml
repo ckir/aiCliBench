@@ -6,6 +6,14 @@ requires-python = ">=3.12"
 dependencies = [
   "ai-plugins-sdk",
   "ai-plugin-example",
+  "ai-core",
+  "ai-schemas",
+  "ai-agents",
+  "ai-benchmark",
+  "ai-integration-claude-code",
+  "ai-integration-antigravity",
+  "pydantic>=2",
+  "typer>=0.9",
 ]
 
 [build-system]
@@ -18,6 +26,13 @@ packages = ["src/ai_cli"]
 [tool.uv.sources]
 ai-plugins-sdk = { workspace = true }
 ai-plugin-example = { workspace = true }
+ai-core = { workspace = true }
+ai-schemas = { workspace = true }
+ai-agents = { workspace = true }
+ai-benchmark = { workspace = true }
+ai-integration-claude-code = { workspace = true }
+ai-integration-antigravity = { workspace = true }
 
 [project.scripts]
 ai = "ai_cli:main"
+codebench = "ai_cli.codebench:app"

@@ -135,3 +135,39 @@ uv build
 ```
 
 Additional commands may be provided for evals and services, but the core commands above must remain stable.
+
+## CodeBench Local (MVP v0.1)
+
+Compares Claude Code vs Antigravity CLI on pinned tasks with Docker-isolated
+trials. Spec: `MVP/codebench_local_mvp_spec.md`. Monorepo mapping: contracts in
+`ai-core`/`ai-schemas`/`ai-agents`, domain in `ai-benchmark`, adapters in
+`integrations/claude-code` + `integrations/antigravity`, CLI in `ai-cli`
+(`codebench` entry point).
+
+```bash
+uv sync --locked
+uv run codebench --help
+uv run codebench doctor
+uv run codebench tasks list
+uv run codebench tasks validate example-task
+uv run codebench run --task example-task --agents all --repeat 1
+uv run codebench runs list --limit 10
+uv run codebench compare --latest
+uv run codebench report --latest
+uv run codebench export --latest --format json
+```
+
+Notes:
+
+- `doctor` never starts a paid task. Verified against installed
+  `claude --help` (supports `--print`, `--output-format`, `--model`) and
+  `agy --help` (supports `-p`/`--print`, `--output-format`, `--model`).
+- Demo task `tasks/pilot/example-task/` runs end-to-end with fake agents in
+  tests; real runs need authenticated CLIs and Docker.
+- Missing model/usage/cost is reported as unknown, never invented. Reports
+  compare full CLI systems, not isolated models.
+- Docs: `docs/codebench-installation.md`, `docs/codebench-configuration.md`,
+  `docs/codebench-tasks.md`, `docs/codebench-safety.md`,
+  `docs/codebench-results.md`.
+- Only `parallelism = 1` (sequential) is supported in v0.1. Windows via WSL2
+  + Docker only.

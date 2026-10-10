@@ -1,0 +1,24 @@
+[project]
+name = "ai-benchmark"
+version = "0.1.0"
+description = "CodeBench Local benchmarking domain (tasks, execution, evaluation, reporting)"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-core",
+  "ai-schemas",
+  "ai-agents",
+  "pydantic>=2",
+  "jinja2>=3",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_benchmark"]
+
+[tool.uv.sources]
+ai-core = { workspace = true }
+ai-schemas = { workspace = true }
+ai-agents = { workspace = true }

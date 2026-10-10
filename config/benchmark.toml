@@ -1,0 +1,38 @@
+# CodeBench Local defaults (§6). Secrets never live here; use CLI login.
+# Copy and edit; the resolved configuration is recorded per experiment.
+
+[data]
+directory = "runs"
+database = "runs/codebench.sqlite3"
+artifact_retention = "all"
+
+[execution]
+default_timeout_seconds = 900
+global_max_timeout_seconds = 3600
+startup_grace_seconds = 10
+parallelism = 1
+network_enabled_for_agent = false
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+container_user = "10001:10001"
+workspace_cleanup = "retain"
+random_seed = 20261010
+
+[agents.claude]
+enabled = true
+command = "claude"
+model = "" # empty means CLI/provider default; recorded as unresolved when unpinned
+timeout_seconds = 900
+output_format = "json" # adapter verifies support via `claude --help`
+
+[agents.antigravity]
+enabled = true
+command = "agy"
+model = ""
+timeout_seconds = 900
+output_format = "stream-json" # used only if supported by installed `agy --help`
+
+[report]
+title = "CodeBench Local"
+include_full_logs = false
