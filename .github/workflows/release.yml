@@ -22,3 +22,4 @@ jobs:
       - uses: googleapis/release-please-action@v5 # Pin to full SHA in production.
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          skip-github-action: "true"
