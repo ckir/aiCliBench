@@ -10,4 +10,4 @@ jobs:
   dependency-review:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/dependency-review-action@v4 # Pin to full SHA in production.
+      - uses: actions/dependency-review-action@v5 # Pin to full SHA in production.
