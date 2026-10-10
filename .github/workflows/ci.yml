@@ -39,7 +39,7 @@ jobs:
         run: uv run ty check --exclude "tasks/**/tests/*.py" --exclude "tasks/**/source/*.py" --exclude "tasks/**/evaluator/**/*.py"
 
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest --import-mode=importlib
 
       - name: Build all packages
         run: uv build --all-packages
