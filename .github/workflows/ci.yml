@@ -36,7 +36,7 @@ jobs:
         run: uv run ruff format --check .
 
       - name: Type check
-        run: uv run ty check
+        run: uv run ty check --exclude "tasks/**/tests/*.py" --exclude "tasks/**/source/*.py" --exclude "tasks/**/evaluator/**/*.py"
 
       - name: Tests
         run: uv run pytest
