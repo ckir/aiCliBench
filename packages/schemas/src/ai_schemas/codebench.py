@@ -269,6 +269,7 @@ class ExperimentRecord(BaseModel):
     host_info: dict[str, Any] = Field(default_factory=dict)
     tool_versions: dict[str, Any] = Field(default_factory=dict)
     notes: str = ""
+    provenance: dict[str, Any] = Field(default_factory=dict)
 
 
 class RunRecord(BaseModel):

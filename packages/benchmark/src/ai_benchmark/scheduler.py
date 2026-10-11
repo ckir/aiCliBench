@@ -18,13 +18,15 @@ from ai_agents.adapter import paired_order
 from ai_benchmark import storage as storage_module
 from ai_benchmark.config import config_snapshot
 from ai_benchmark.evaluator import GateSpec, evaluator_digest, run_evaluation
+from ai_benchmark.provenance import build_manifest, environment_digest
 from ai_benchmark.redaction import redact_text
-from ai_benchmark.task_registry import LoadedTask, load_task, resolve_repository
 from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
+from ai_benchmark.task_registry import LoadedTask, load_task, resolve_repository
 from ai_benchmark.workspace import checkout_fresh, workspace_diff
 from ai_core.errors import ConfigurationError
 from ai_core.ids import new_id
 from ai_schemas import BenchmarkConfig
+from ai_schemas.codebench import PROMPT_WRAPPER_VERSION
 
 
 def utc_now() -> str:
@@ -152,7 +154,30 @@ def run_experiment(
         except Exception:
             tool_versions[name] = None
 
+    from ai_benchmark.provenance import build_manifest, environment_digest
+
     conn = storage_module.connect(db_path)
+
+    # Build provenance manifest
+    agents_info = {name: adapter.capability.model_dump() for name, adapter in adapters.items()}
+    tasks_info = {}
+    for loaded in loaded_tasks:
+        task = loaded.definition
+        task_dir = loaded.task_dir
+        env_digest = environment_digest(task_dir, task.dockerfile)
+        tasks_info[task.id] = {
+            "commit": task.commit[:12],
+            "environment_digest": env_digest,
+            "image_id": "n/a",  # Will be filled in after image build
+        }
+    manifest = build_manifest(
+        prompt_wrapper_version=PROMPT_WRAPPER_VERSION,
+        docker=docker_version(),
+        agents=agents_info,
+        tasks=tasks_info,
+    )
+    provenance_json = json.dumps(manifest, sort_keys=True)
+
     storage_module.insert_experiment(
         conn,
         {
@@ -170,6 +195,7 @@ def run_experiment(
             "host_info_json": json.dumps(host_info(), sort_keys=True),
             "tool_versions_json": json.dumps(tool_versions, sort_keys=True, default=str),
             "notes": request.notes,
+            "provenance_json": provenance_json,
         },
     )
     conn.commit()

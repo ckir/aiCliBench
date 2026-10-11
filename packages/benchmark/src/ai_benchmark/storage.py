@@ -7,9 +7,10 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from ai_benchmark.provenance import _MIGRATIONS
 from ai_core.errors import ConfigurationError
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 _SCHEMA = """
 PRAGMA foreign_keys = ON;
@@ -33,7 +34,8 @@ CREATE TABLE IF NOT EXISTS experiments (
     resolved_config_json TEXT NOT NULL,
     host_info_json TEXT NOT NULL,
     tool_versions_json TEXT NOT NULL,
-    notes TEXT NOT NULL DEFAULT ''
+    notes TEXT NOT NULL DEFAULT '',
+    provenance_json TEXT NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE IF NOT EXISTS runs (
@@ -99,17 +101,31 @@ def connect(path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(str(path))
     conn.execute("PRAGMA foreign_keys = ON")
     conn.executescript(_SCHEMA)
+
+    # Check current schema version
     row = conn.execute(
         "SELECT version FROM schema_version ORDER BY version DESC LIMIT 1"
     ).fetchone()
-    if row is None:
-        conn.execute(
-            "INSERT INTO schema_version (version, applied_at) VALUES (?, datetime('now'))",
-            (SCHEMA_VERSION,),
-        )
-        conn.commit()
-    elif row[0] != SCHEMA_VERSION:
-        raise ConfigurationError(f"unsupported schema version: {row[0]}")
+    current_version = row[0] if row else 0
+
+    # Apply migrations
+    for version in range(current_version + 1, SCHEMA_VERSION + 1):
+        if version in _MIGRATIONS:
+            for stmt in _MIGRATIONS[version]:
+                try:
+                    conn.execute(stmt)
+                except sqlite3.OperationalError as e:
+                    # Column might already exist
+                    if "duplicate column" not in str(e).lower():
+                        raise
+            conn.execute(
+                "INSERT INTO schema_version (version, applied_at) VALUES (?, datetime('now'))",
+                (version,),
+            )
+
+    if current_version > SCHEMA_VERSION:
+        raise ConfigurationError(f"unsupported schema version: {current_version}")
+
     return conn
 
 
@@ -147,15 +163,17 @@ _RUN_COLUMNS = frozenset(
 
 
 def insert_experiment(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
+    # Provide default for provenance_json if not present
+    record.setdefault("provenance_json", "{}")
     conn.execute(
         """
         INSERT INTO experiments
         (id, created_at, started_at, ended_at, status, suite, task_ids_json,
          agent_names_json, repeat_count, random_seed, resolved_config_json,
-         host_info_json, tool_versions_json, notes)
+         host_info_json, tool_versions_json, notes, provenance_json)
         VALUES (:id, :created_at, :started_at, :ended_at, :status, :suite,
          :task_ids_json, :agent_names_json, :repeat_count, :random_seed,
-         :resolved_config_json, :host_info_json, :tool_versions_json, :notes)
+         :resolved_config_json, :host_info_json, :tool_versions_json, :notes, :provenance_json)
         """,
         record,
     )
@@ -171,6 +189,16 @@ def update_experiment_status(
             "UPDATE experiments SET status=?, ended_at=? WHERE id=?",
             (status, ended_at, experiment_id),
         )
+
+
+def update_experiment_provenance(
+    conn: sqlite3.Connection, experiment_id: str, provenance_json: str
+) -> None:
+    """Update the provenance_json column for an experiment."""
+    conn.execute(
+        "UPDATE experiments SET provenance_json = ? WHERE id = ?",
+        (provenance_json, experiment_id),
+    )
 
 
 def insert_run(conn: sqlite3.Connection, record: dict[str, Any]) -> None:
