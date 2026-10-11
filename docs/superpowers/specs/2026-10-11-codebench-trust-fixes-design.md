@@ -214,3 +214,37 @@ Wave 1 (disjoint files): D4 gates · D1 materialize+repin · D7 generic adapter.
 Wave 2: D5 statistics · D3 verify (+ D2 apply) · D8 provenance/build cache.
 Wave 3: D2 overlays for all 24 tasks (parallel batches, each verified) · D6 scaffold.
 Final: docs, todo update, full gate, `uv build --all-packages`.
+
+## Builder-check decisions (2026-10-11, settled by the author)
+
+1. `GenericCliAdapter(name, config)`: the agent name is injected at
+   construction and must equal the config key. `BenchmarkConfig._check_timeouts`
+   also checks every custom agent. The Docker agent path (`_run_agent_in_docker`)
+   keeps its current contract; the task image lacking agent binaries is a
+   pre-existing limitation, out of scope here.
+2. `--agents all` = `AgentsConfig.enabled_agents()` (built-ins plus enabled
+   custom agents). Paired statistics are computed only when exactly two agents
+   ran; `run` prints a note when more than two are selected.
+3. Materialization is implicit: `validate_task(check_repo=True)` and the
+   scheduler's `_run_once` call `materialize_repo(task_dir)` before touching the
+   repository. `kept` additionally requires a clean worktree (`git status
+   --porcelain` empty); a dirty repo raises `ConfigurationError` unless `force`.
+4. Gate semantics: gates run whenever the acceptance command returned an exit
+   code (pass or fail), never after an acceptance timeout. Acceptance test pass
+   + required gate fail ⇒ `status = FAIL`, `acceptance_pass = False`. A timeout
+   of any *configured* gate ⇒ `status = EVALUATION_ERROR`, `acceptance_pass =
+   None`.
+5. Digests (`evaluator_digest`, `environment_digest`) skip `__pycache__`,
+   `*.pyc` and `.pytest_cache`. Changing `evaluator_digest` is allowed (no
+   released databases). Local-mode evaluation sets `PYTHONDONTWRITEBYTECODE=1`.
+6. No-docker `verify` inherits `PATH`, so under `uv run` the venv `python3`
+   (with pytest) is used; documented as the supported way to run it.
+7. Paired bootstrap runs over all valid pairs (both evaluations present and
+   neither an evaluation error); delta = mean(pass_A − pass_B) with A, B the
+   alphabetically sorted agent names, labelled in output.
+8. `connect` applies forward migrations in order inside a transaction and
+   inserts a new `schema_version` row per applied version; migration 1→2 adds
+   `experiments.provenance_json` (guarded by `PRAGMA table_info`). Fresh
+   databases get the column from `_SCHEMA` directly.
+9. `CustomAgentConfig` lives in `ai_schemas` (no integration import);
+   `GenericCliConfig` in the integration package mirrors its fields.
