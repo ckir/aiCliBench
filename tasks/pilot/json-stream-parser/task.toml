@@ -1,0 +1,28 @@
+schema_version = 1
+id = "json-stream-parser"
+title = "Fix chunk-boundary handling in streaming NDJSON parser"
+category = "bugfix"
+suite = "pilot"
+description = "Streaming NDJSON parser splits on newlines within chunks without buffering partial records."
+repository = "repo"
+commit = "96e234610020be67a31dfa20c21e79ad4787e8d1"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "bugfix", "json", "streaming"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

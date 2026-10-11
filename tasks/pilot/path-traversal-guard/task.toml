@@ -1,0 +1,28 @@
+schema_version = 1
+id = "path-traversal-guard"
+title = "Implement secure file path resolver against directory traversal attacks"
+category = "security"
+suite = "pilot"
+description = "Implement sandbox path resolution rejecting dot-dot escapes, null bytes, and symlink breakouts."
+repository = "repo"
+commit = "4a13f96d262bef332f9ba34605d4129a4df896bb"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "security", "path-traversal", "filesystem"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

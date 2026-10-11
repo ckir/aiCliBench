@@ -1,0 +1,28 @@
+schema_version = 1
+id = "semver-comparator"
+title = "Fix SemVer 2.0 pre-release numeric identifier comparison"
+category = "bugfix"
+suite = "pilot"
+description = "SemVer pre-release comparison compares numeric identifiers as strings instead of integers."
+repository = "repo"
+commit = "76ef666f5db5641d745feed21161430300163a13"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "bugfix", "semver", "parsing"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

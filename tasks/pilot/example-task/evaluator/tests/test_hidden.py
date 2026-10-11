@@ -1,6 +1,6 @@
 """Hidden acceptance tests (never mounted into the agent workspace)."""
 
-from calc import add
+from calc import add  # ty: ignore[unresolved-import]
 
 
 def test_add_positive():

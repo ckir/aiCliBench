@@ -1,0 +1,28 @@
+schema_version = 1
+id = "string-levenshtein-distance"
+title = "Optimize Levenshtein edit distance to O(min(M, N)) space DP"
+category = "perf"
+suite = "pilot"
+description = "Optimize string Levenshtein distance from naive recursion / full matrix to linear-space dynamic programming."
+repository = "repo"
+commit = "17a1a18daf72c4637de75aa533863b2ec6fdc199"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "perf", "strings", "algorithms"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

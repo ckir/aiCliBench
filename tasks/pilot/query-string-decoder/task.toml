@@ -1,0 +1,28 @@
+schema_version = 1
+id = "query-string-decoder"
+title = "Fix URL query string decoding of repeated keys and plus signs"
+category = "bugfix"
+suite = "pilot"
+description = "Query string decoder overwrites duplicate keys and fails to unquote plus signs as spaces."
+repository = "repo"
+commit = "530069a03d5fd48e4492208214ef8f0c524b898d"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "bugfix", "url", "parser"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

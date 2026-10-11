@@ -1,0 +1,28 @@
+schema_version = 1
+id = "typed-result-monad"
+title = "Implement typed Result monad (Ok, Err) with monadic chaining"
+category = "types"
+suite = "pilot"
+description = "Implement a typed Result[T, E] monad supporting Ok, Err, unwrap, map, and and_then."
+repository = "repo"
+commit = "94bbadf9c7556e06564dcd09da12149d96192e1f"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "types", "monads", "error-handling"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

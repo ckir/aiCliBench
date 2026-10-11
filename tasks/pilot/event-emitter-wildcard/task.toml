@@ -1,0 +1,28 @@
+schema_version = 1
+id = "event-emitter-wildcard"
+title = "Implement wildcard event emitter with single and multi-level matching"
+category = "feature"
+suite = "pilot"
+description = "Implement an EventEmitter supporting exact, single-level (*), and multi-level (**) topic subscriptions."
+repository = "repo"
+commit = "5fe118657877a8d1eec994b0100293d5574eeca9"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "feature", "events", "pubsub"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false

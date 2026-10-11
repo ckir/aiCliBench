@@ -95,16 +95,14 @@ ignore = []
 "packages/plugins/*/tests/*.py" = ["S101"]
 "packages/integrations/*/tests/*.py" = ["S101"]
 "packages/services/*/tests/*.py" = ["S101"]
-"tasks/**/tests/*.py" = ["S101"]
-"tasks/**/source/*.py" = ["S101"]
-"tasks/**/evaluator/**/*.py" = ["S101"]
+"tasks/**" = ["S101", "S104", "S311", "PT011", "PT015", "B011", "B905", "UP046", "E501", "E731"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 
 [tool.pytest.ini_options]
-addopts = "-ra"
+addopts = "-ra --import-mode=importlib"
 testpaths = [
   "packages/*/tests",
   "packages/plugins/*/tests",

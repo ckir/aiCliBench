@@ -1,0 +1,28 @@
+schema_version = 1
+id = "sparse-matrix-multiplication"
+title = "Optimize sparse matrix multiplication using coordinate / CSR representation"
+category = "perf"
+suite = "pilot"
+description = "Optimize sparse matrix multiplication from O(N^3) dense iteration to O(nnz) non-zero traversal."
+repository = "repo"
+commit = "b90e7bb07d3cf53ed2e266e9e1c96b6efada18bd"
+instruction_file = "instruction.md"
+dockerfile = "environment/Dockerfile"
+evaluator_command = ["bash", "/evaluator/run_tests.sh"]
+timeout_seconds = 900
+max_test_seconds = 300
+cpu_limit = 2
+memory_limit = "4g"
+pids_limit = 256
+network_enabled_for_agent = false
+tags = ["python", "perf", "linear-algebra", "sparse-matrix"]
+
+[environment]
+working_directory = "/workspace"
+setup_command = []
+
+[scoring]
+acceptance_weight = 1.0
+build_required = false
+lint_required = false
+typecheck_required = false
