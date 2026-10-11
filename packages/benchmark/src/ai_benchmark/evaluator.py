@@ -209,6 +209,7 @@ def run_evaluation(
             env={
                 "EVALUATOR_DIR": str(evaluator_dir),
                 "OUTPUT_DIR": str(output_dir),
+                "WORKSPACE_DIR": str(eval_workspace),
                 "WORKSPACE": str(eval_workspace),
                 "PYTHONPATH": str(eval_workspace),
                 "PYTHONDONTWRITEBYTECODE": "1",
