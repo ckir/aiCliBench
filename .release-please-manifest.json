@@ -1,6 +1,6 @@
 {
   "packages/core": "0.1.0",
-  "packages/schemas": "0.1.0",
+  "packages/schemas": "0.2.0",
   "packages/ai": "0.1.0",
   "packages/agents": "0.1.0",
   "packages/plugins-sdk": "0.1.0",
