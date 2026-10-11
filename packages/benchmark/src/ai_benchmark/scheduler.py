@@ -20,6 +20,7 @@ from ai_benchmark.config import config_snapshot
 from ai_benchmark.evaluator import GateSpec, evaluator_digest, run_evaluation
 from ai_benchmark.redaction import redact_text
 from ai_benchmark.task_registry import LoadedTask, load_task, resolve_repository
+from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
 from ai_benchmark.workspace import checkout_fresh, workspace_diff
 from ai_core.errors import ConfigurationError
 from ai_core.ids import new_id
@@ -270,6 +271,73 @@ def _run_once(
     started_at = utc_now()
     workspace_dir = artifact_dir / "workspace"
     cache_dir = artifact_dir.parent.parent / "_git-cache"
+
+    # Materialize task repository from source/ if task-relative
+    try:
+        materialize_repo(loaded.task_dir, check=True)
+    except MaterializeMismatchError as exc:
+        storage_module.insert_run(
+            conn,
+            {
+                "id": run_id,
+                "experiment_id": exp_id,
+                "task_id": task.id,
+                "agent_name": adapter.agent_name,
+                "repetition": repetition,
+                "pair_key": pair_key,
+                "order_index": order_index,
+                "status": "setup_error",
+                "requested_model": None,
+                "reported_model": None,
+                "cli_version": None,
+                "starting_commit": "",
+                "instruction_sha256": loaded.instruction_sha256,
+                "environment_digest": "",
+                "evaluator_digest": "",
+                "started_at": started_at,
+                "ended_at": utc_now(),
+                "elapsed_seconds": 0.0,
+                "exit_code": None,
+                "error_category": "setup_error",
+                "error_message": f"materialize mismatch: {exc}",
+                "usage_json": "{}",
+                "artifact_dir": str(artifact_dir),
+            },
+        )
+        conn.commit()
+        return
+    except ConfigurationError as exc:
+        storage_module.insert_run(
+            conn,
+            {
+                "id": run_id,
+                "experiment_id": exp_id,
+                "task_id": task.id,
+                "agent_name": adapter.agent_name,
+                "repetition": repetition,
+                "pair_key": pair_key,
+                "order_index": order_index,
+                "status": "setup_error",
+                "requested_model": None,
+                "reported_model": None,
+                "cli_version": None,
+                "starting_commit": "",
+                "instruction_sha256": loaded.instruction_sha256,
+                "environment_digest": "",
+                "evaluator_digest": "",
+                "started_at": started_at,
+                "ended_at": utc_now(),
+                "elapsed_seconds": 0.0,
+                "exit_code": None,
+                "error_category": "setup_error",
+                "error_message": f"materialize failed: {exc}",
+                "usage_json": "{}",
+                "artifact_dir": str(artifact_dir),
+            },
+        )
+        conn.commit()
+        return
+
     repository = resolve_repository(loaded.task_dir, task.repository)
 
     # Placeholder run row so interruptions still persist.

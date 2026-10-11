@@ -4,6 +4,7 @@ from pathlib import Path
 
 from ai_benchmark.evaluator import run_evaluation
 from ai_benchmark.fake_agent import FakeAgentAdapter
+from ai_benchmark.task_materialize import materialize_repo
 from ai_benchmark.task_registry import load_task, resolve_repository, validate_task
 from ai_benchmark.workspace import checkout_fresh
 from ai_core.status import EvalStatus, RunStatus
@@ -11,66 +12,14 @@ from ai_core.status import EvalStatus, RunStatus
 DEMO_DIR = Path(__file__).resolve().parents[3] / "tasks" / "pilot" / "example-task"
 
 
-def _ensure_demo_repo() -> None:
-    """Regenerate the deterministic demo repo when missing (CI-safe)."""
-    import os
-    import shutil
-    import subprocess
-
-    repo = DEMO_DIR / "repo"
-    source = DEMO_DIR / "source"
-    if repo.is_dir() and (repo / ".git").is_dir():
-        return
-    if repo.exists():
-        shutil.rmtree(repo)
-    repo.mkdir(parents=True)
-    for name in ("calc.py", "README.md", "test_visible.py"):
-        shutil.copy(source / name, repo / name)
-    env = {
-        **os.environ,
-        "GIT_AUTHOR_NAME": "CodeBench Demo",
-        "GIT_AUTHOR_EMAIL": "demo@example.invalid",
-        "GIT_COMMITTER_NAME": "CodeBench Demo",
-        "GIT_COMMITTER_EMAIL": "demo@example.invalid",
-        "GIT_AUTHOR_DATE": "2026-01-01T00:00:00Z",
-        "GIT_COMMITTER_DATE": "2026-01-01T00:00:00Z",
-    }
-    subprocess.run(
-        ["git", "init"],  # noqa: S607 - intentional PATH lookup of explicit tool
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-    subprocess.run(
-        ["git", "add", "."],  # noqa: S607 - intentional PATH lookup of explicit tool
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-    subprocess.run(
-        [  # noqa: S607 - intentional PATH lookup of explicit tool
-            "git",
-            "commit",
-            "-m",
-            "demo: buggy add",
-        ],
-        cwd=repo,
-        check=True,
-        capture_output=True,
-        env=env,
-    )
-
-
 def test_demo_validates():
-    _ensure_demo_repo()
+    materialize_repo(DEMO_DIR, force=True)
     result = validate_task(DEMO_DIR, check_repo=True)
     assert result.ok, result.errors
 
 
 def test_demo_original_fails_and_solution_passes(tmp_path: Path):
-    _ensure_demo_repo()
+    materialize_repo(DEMO_DIR, force=True)
     loaded = load_task(DEMO_DIR)
     repo = resolve_repository(DEMO_DIR, loaded.definition.repository)
     evaluator_dir = DEMO_DIR / "evaluator"
@@ -156,7 +105,7 @@ def test_demo_original_fails_and_solution_passes(tmp_path: Path):
 
 
 def test_agent_cannot_see_hidden_tests(tmp_path: Path):
-    _ensure_demo_repo()
+    materialize_repo(DEMO_DIR, force=True)
     loaded = load_task(DEMO_DIR)
     repo = resolve_repository(DEMO_DIR, loaded.definition.repository)
     workspace = tmp_path / "ws-hidden"

@@ -10,6 +10,7 @@ from pathlib import Path
 
 from ai_agents.adapter import sha256_text, wrap_prompt
 from ai_benchmark.paths import safe_join
+from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
 from ai_core.errors import ConfigurationError, ValidationError
 from ai_schemas import TaskDefinition
 from ai_schemas.codebench import PROMPT_WRAPPER_VERSION
@@ -180,6 +181,17 @@ def validate_task(
             )
             if result.returncode != 0:
                 errors.append(f"commit {definition.commit} not found in {repo}")
+
+        # Materialize task-relative repositories
+        from ai_benchmark.task_materialize import _is_task_relative_repo
+
+        if _is_task_relative_repo(definition.repository):
+            try:
+                materialize_repo(task_dir, check=True)
+            except MaterializeMismatchError as exc:
+                errors.append(f"materialize mismatch: {exc}")
+            except ConfigurationError as exc:
+                errors.append(f"materialize failed: {exc}")
 
     if check_docker:
         dockerfile = task_dir / definition.dockerfile

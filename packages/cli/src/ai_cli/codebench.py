@@ -269,6 +269,53 @@ def tasks_build(
     typer.echo(f"Build complete: {built_count} built, {skipped_count} skipped.")
 
 
+@tasks_app.command("materialize")
+def tasks_materialize(
+    task_id: Annotated[str | None, typer.Argument(help="Task ID (default: all)")] = None,
+    suite: Annotated[str | None, typer.Option(help="Suite name")] = None,
+    force: Annotated[bool, typer.Option(help="Force regenerate even if repo exists")] = False,
+    repin: Annotated[bool, typer.Option(help="Update pinned commit in task.toml")] = False,
+) -> None:
+    """Materialize task repositories from source/ (§7.3)."""
+    from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
+    from ai_benchmark.task_registry import discover_tasks
+
+    root = _tasks_root()
+    try:
+        tasks = discover_tasks(root, suite=suite)
+    except ConfigurationError as exc:
+        typer.echo(f"Cannot load tasks: {exc}", err=True)
+        raise typer.Exit(code=EXIT_TASK) from exc
+    selected = [t for t in tasks if task_id is None or t.definition.id == task_id]
+    if task_id is not None and not selected:
+        typer.echo(f"Task not found: {task_id}", err=True)
+        raise typer.Exit(code=EXIT_TASK)
+    failed = False
+    for loaded in selected:
+        task = loaded.definition
+        try:
+            result = materialize_repo(loaded.task_dir, force=force, check=not repin)
+            if result.action == "generated":
+                typer.echo(f"  {task.id}: GENERATED (commit {result.commit[:12]})")
+                if repin:
+                    from ai_benchmark.task_materialize import repin_task
+
+                    repin_task(loaded.task_dir, result.commit)
+                    typer.echo(f"  {task.id}: PINNED to {result.commit[:12]}")
+            elif result.action == "kept":
+                typer.echo(f"  {task.id}: KEPT (commit {result.commit[:12]})")
+            elif result.action == "skipped":
+                typer.echo(f"  {task.id}: SKIPPED (not task-relative or no source/)")
+        except MaterializeMismatchError as exc:
+            typer.echo(f"  {task.id}: MISMATCH (expected {exc.expected[:12]}, got {exc.actual[:12]})", err=True)
+            failed = True
+        except ConfigurationError as exc:
+            typer.echo(f"  {task.id}: ERROR: {exc}", err=True)
+            failed = True
+    if failed and not repin:
+        raise typer.Exit(code=EXIT_TASK)
+
+
 @app.command()
 def run(
     task: Annotated[str | None, typer.Option(help="Single task ID")] = None,
