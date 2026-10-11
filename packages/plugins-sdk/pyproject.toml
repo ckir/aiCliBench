@@ -1,6 +1,6 @@
 [project]
 name = "ai-plugins-sdk"
-version = "0.1.0"
+version = "0.2.0"
 description = "SDK for AI plugins and tools"
 requires-python = ">=3.12"
 dependencies = [
