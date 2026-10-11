@@ -16,6 +16,7 @@ dependencies = [
   "ai-integration-openai",
   "ai-integration-claude-code",
   "ai-integration-antigravity",
+  "ai-integration-generic-cli",
   "ai-mcp-core",
   "ai-mcp-server",
   "ai-mcp-client",
@@ -40,6 +41,7 @@ ai-plugin-example = { workspace = true }
 ai-integration-openai = { workspace = true }
 ai-integration-claude-code = { workspace = true }
 ai-integration-antigravity = { workspace = true }
+ai-integration-generic-cli = { workspace = true }
 ai-mcp-core = { workspace = true }
 ai-mcp-server = { workspace = true }
 ai-mcp-client = { workspace = true }

@@ -56,6 +56,19 @@ class AgentInstanceConfig(BaseModel):
     output_format: str = Field(default="", min_length=0)
 
 
+class CustomAgentConfig(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    enabled: bool = True
+    command: str = Field(min_length=1)
+    args: list[str] = Field(default_factory=list)
+    output_format: Literal["json", "jsonl", "text"] = "text"
+    model: str = Field(default="")
+    model_flag: str = Field(default="")
+    version_args: list[str] = Field(default_factory=lambda: ["--version"])
+    timeout_seconds: int = Field(default=900, gt=0)
+
+
 class AgentsConfig(BaseModel):
     model_config = {"extra": "forbid"}
 
@@ -65,6 +78,7 @@ class AgentsConfig(BaseModel):
     antigravity: AgentInstanceConfig = Field(
         default_factory=lambda: AgentInstanceConfig(command="agy", output_format="stream-json")
     )
+    custom: dict[str, CustomAgentConfig] = Field(default_factory=dict)
 
     def enabled_agents(self) -> list[str]:
         out: list[str] = []
@@ -72,7 +86,24 @@ class AgentsConfig(BaseModel):
             out.append("claude")
         if self.antigravity.enabled:
             out.append("antigravity")
+        for name, cfg in self.custom.items():
+            if cfg.enabled:
+                out.append(name)
         return out
+
+    @model_validator(mode="after")
+    def _validate_custom_names(self) -> AgentsConfig:
+        reserved = {"claude", "antigravity"}
+        for name in self.custom:
+            if name in reserved:
+                raise ValueError(f"invalid custom agent name: {name!r} (reserved)")
+            if not name.islower() or not name[0].isalpha():
+                raise ValueError(f"invalid custom agent name: {name!r} (must start with letter, lowercase)")
+            if not all(c.isalnum() or c in "-_" for c in name):
+                raise ValueError(f"invalid custom agent name: {name!r} (only alphanumeric, -, _)")
+            if len(name) > 32:
+                raise ValueError(f"invalid custom agent name: {name!r} (max 32 chars)")
+        return self
 
 
 class ReportConfig(BaseModel):
@@ -106,6 +137,11 @@ class BenchmarkConfig(BaseModel):
             if inst.timeout_seconds > self.execution.global_max_timeout_seconds:
                 raise ValueError(
                     f"agents.{name}.timeout_seconds exceeds execution.global_max_timeout_seconds"
+                )
+        for name, inst in self.agents.custom.items():
+            if inst.timeout_seconds > self.execution.global_max_timeout_seconds:
+                raise ValueError(
+                    f"agents.custom.{name}.timeout_seconds exceeds execution.global_max_timeout_seconds"
                 )
         return self
 

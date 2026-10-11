@@ -53,6 +53,10 @@
       "package-name": "ai-integration-openai",
       "release-type": "python"
     },
+    "packages/integrations/generic-cli": {
+      "package-name": "ai-integration-generic-cli",
+      "release-type": "python"
+    },
     "packages/services/api": {
       "package-name": "ai-service-api",
       "release-type": "python"

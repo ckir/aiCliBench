@@ -67,15 +67,24 @@ def _resolve_agents(selection: str, cfg: Any) -> dict[str, Any]:
     from ai_integration_antigravity.config import AntigravityConfig
     from ai_integration_claude_code.adapter import ClaudeCodeAdapter
     from ai_integration_claude_code.config import ClaudeCodeConfig
+    from ai_integration_generic_cli.adapter import GenericCliAdapter
+    from ai_integration_generic_cli.config import GenericCliConfig
 
     wanted: list[str]
     if selection == "all":
-        wanted = ["claude", "antigravity"]
+        wanted = cfg.agents.enabled_agents()
     elif selection in ("claude", "antigravity"):
         wanted = [selection]
     else:
-        typer.echo(f"Unknown --agents {selection!r}; use all|claude|antigravity", err=True)
-        raise typer.Exit(code=EXIT_CONFIG)
+        # Check if it's a custom agent
+        available = cfg.agents.enabled_agents()
+        if selection not in available:
+            typer.echo(
+                f"Unknown --agents {selection!r}; use all|claude|antigravity|<custom name>",
+                err=True,
+            )
+            raise typer.Exit(code=EXIT_CONFIG)
+        wanted = [selection]
     adapters: dict[str, Any] = {}
     for name in wanted:
         if name == "claude":
@@ -89,7 +98,7 @@ def _resolve_agents(selection: str, cfg: Any) -> dict[str, Any]:
                     output_format=cfg.agents.claude.output_format or "json",
                 )
             )
-        else:
+        elif name == "antigravity":
             if not cfg.agents.antigravity.enabled:
                 continue
             adapters[name] = AntigravityAdapter(
@@ -99,6 +108,23 @@ def _resolve_agents(selection: str, cfg: Any) -> dict[str, Any]:
                     timeout_seconds=float(cfg.agents.antigravity.timeout_seconds),
                     output_format=cfg.agents.antigravity.output_format or "stream-json",
                 )
+            )
+        else:
+            # Custom agent
+            custom_cfg = cfg.agents.custom.get(name)
+            if not custom_cfg or not custom_cfg.enabled:
+                continue
+            adapters[name] = GenericCliAdapter(
+                name,
+                GenericCliConfig(
+                    command=custom_cfg.command,
+                    args=custom_cfg.args,
+                    output_format=custom_cfg.output_format,
+                    model=custom_cfg.model,
+                    model_flag=custom_cfg.model_flag,
+                    version_args=custom_cfg.version_args,
+                    timeout_seconds=custom_cfg.timeout_seconds,
+                ),
             )
     if not adapters:
         typer.echo("No requested agents are enabled/available.", err=True)
@@ -136,11 +162,13 @@ def doctor(
 ) -> None:
     """Check environment without paid or state-changing tasks (§4.1)."""
     cfg = _load_config(config)
+    custom_commands = {name: cc.command for name, cc in cfg.agents.custom.items() if cc.enabled}
     report = run_doctor(
         config_path=config or _default_config_path(),
         data_dir=Path(cfg.data.directory),
         claude_command=cfg.agents.claude.command,
         agy_command=cfg.agents.antigravity.command,
+        custom_commands=custom_commands,
     )
     for check in report.checks:
         mark = "ok" if check.ok else "FAIL"

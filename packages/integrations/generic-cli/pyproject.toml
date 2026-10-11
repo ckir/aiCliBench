@@ -1,0 +1,25 @@
+[project]
+name = "ai-integration-generic-cli"
+version = "0.1.0"
+description = "Generic CLI agent adapter for CodeBench"
+requires-python = ">=3.12"
+dependencies = [
+  "ai-core",
+  "ai-schemas",
+  "ai-agents",
+  "ai-benchmark",
+  "pydantic>=2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ai_integration_generic_cli"]
+
+[tool.uv.sources]
+ai-core = { workspace = true }
+ai-schemas = { workspace = true }
+ai-agents = { workspace = true }
+ai-benchmark = { workspace = true }

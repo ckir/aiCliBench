@@ -129,6 +129,7 @@ def run_doctor(
     data_dir: Path | None = None,
     claude_command: str = "claude",
     agy_command: str = "agy",
+    custom_commands: dict[str, str] | None = None,
 ) -> DoctorReport:
     """Run all health checks without paid or state-changing work."""
     directory = data_dir or Path("runs")
@@ -140,4 +141,7 @@ def run_doctor(
         _cli_check("antigravity", agy_command),
         _config_check(config_path, directory),
     ]
+    if custom_commands:
+        for name, command in custom_commands.items():
+            checks.append(_cli_check(name, command))
     return DoctorReport(checks=tuple(checks))
