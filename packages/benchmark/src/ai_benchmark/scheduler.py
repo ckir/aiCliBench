@@ -17,7 +17,7 @@ from typing import Any
 from ai_agents.adapter import paired_order
 from ai_benchmark import storage as storage_module
 from ai_benchmark.config import config_snapshot
-from ai_benchmark.evaluator import evaluator_digest, run_evaluation
+from ai_benchmark.evaluator import GateSpec, evaluator_digest, run_evaluation
 from ai_benchmark.redaction import redact_text
 from ai_benchmark.task_registry import LoadedTask, load_task, resolve_repository
 from ai_benchmark.workspace import checkout_fresh, workspace_diff
@@ -474,6 +474,11 @@ def _run_once(
     evaluator_out = artifact_dir / "evaluator"
     evaluator_out.mkdir(parents=True, exist_ok=True)
     eval_command = _resolve_eval_command(task.evaluator_command, evaluator_dir)
+    # Build GateSpec from task scoring.
+    gates = GateSpec.from_scoring(
+        task.scoring,
+        resolve=lambda c: _resolve_eval_command(c, evaluator_dir),
+    )
     try:
         eval_result = run_evaluation(
             snapshot_dir=workspace_dir,
@@ -482,6 +487,7 @@ def _run_once(
             output_dir=evaluator_out,
             timeout_seconds=float(task.max_test_seconds),
             use_docker=use_docker,
+            gates=gates,
         )
     except Exception as exc:
         storage_module.update_run(
@@ -524,14 +530,21 @@ def _run_once(
             "tests_passed": eval_result.tests_passed,
             "tests_failed": eval_result.tests_failed,
             "tests_skipped": eval_result.tests_skipped,
-            "build_pass": None,
-            "lint_pass": None,
-            "typecheck_pass": None,
+            "build_pass": 1
+            if eval_result.build_pass is True
+            else (0 if eval_result.build_pass is False else None),
+            "lint_pass": 1
+            if eval_result.lint_pass is True
+            else (0 if eval_result.lint_pass is False else None),
+            "typecheck_pass": 1
+            if eval_result.typecheck_pass is True
+            else (0 if eval_result.typecheck_pass is False else None),
             "regression_pass": None,
             "output_json": json.dumps(
                 {
                     "stdout_tail": eval_result.stdout[-4000:],
                     "stderr_tail": eval_result.stderr[-2000:],
+                    "gates": eval_result.gate_outputs,
                 }
             ),
             "evaluator_version": eval_result.evaluator_version,

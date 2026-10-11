@@ -1,9 +1,10 @@
 from pathlib import Path
+import json
 
 from ai_benchmark.doctor import run_doctor
 from ai_benchmark.fake_agent import FakeAgentAdapter
 from ai_benchmark.scheduler import ExperimentRequest, run_experiment
-from ai_benchmark.storage import connect, runs_for_experiment
+from ai_benchmark.storage import connect, evaluation_for_run, runs_for_experiment
 from ai_schemas import BenchmarkConfig
 
 
@@ -83,3 +84,37 @@ def test_scheduler_rejects_bad_repeat(tmp_path: Path):
             runs_dir=tmp_path / "runs",
             use_docker=False,
         )
+
+
+def test_scheduler_records_gate_results(tmp_path: Path):
+    tasks_root = Path("tasks")
+    assert (tasks_root / "pilot" / "example-task" / "task.toml").is_file()
+    config = BenchmarkConfig()
+    adapters = {
+        "claude": FakeAgentAdapter(agent_name="claude", mode="pass"),
+        "antigravity": FakeAgentAdapter(agent_name="antigravity", mode="fail"),
+    }
+    summary = run_experiment(
+        config=config,
+        tasks_root=tasks_root,
+        request=ExperimentRequest(
+            suite="pilot",
+            task_ids=["example-task"],
+            agent_names=["claude", "antigravity"],
+            repeat_count=1,
+        ),
+        adapters=adapters,
+        db_path=tmp_path / "codebench.sqlite3",
+        runs_dir=tmp_path / "runs",
+        experiment_id="exp_gates",
+        use_docker=False,
+    )
+    conn = connect(tmp_path / "codebench.sqlite3")
+    runs = runs_for_experiment(conn, "exp_gates")
+    evals = {r["agent_name"]: evaluation_for_run(conn, r["id"]) for r in runs}
+    assert evals["claude"]["build_pass"] == 1
+    assert evals["claude"]["acceptance_pass"] == 1
+    assert evals["antigravity"]["build_pass"] == 1
+    assert evals["antigravity"]["acceptance_pass"] == 0
+    assert evals["claude"]["lint_pass"] is None
+    assert "gates" in json.loads(evals["claude"]["output_json"])

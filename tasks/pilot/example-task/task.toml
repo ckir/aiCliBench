@@ -23,6 +23,7 @@ setup_command = []
 
 [scoring]
 acceptance_weight = 1.0
-build_required = false
+build_required = true
+build_command = ["python3", "-m", "compileall", "-q", "."]
 lint_required = false
 typecheck_required = false
