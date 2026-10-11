@@ -6,7 +6,7 @@
   "packages/plugins-sdk": "0.1.0",
   "packages/mcp-core": "0.1.0",
   "packages/mcp-client": "0.1.0",
-  "packages/mcp-server": "0.1.0",
+  "packages/mcp-server": "0.2.0",
   "packages/mcp-testing": "0.1.0",
   "packages/evals": "0.1.0",
   "packages/cli": "0.1.0",
