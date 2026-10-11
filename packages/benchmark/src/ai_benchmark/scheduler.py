@@ -179,7 +179,7 @@ def run_experiment(
                 else ""
             ),
             "environment_digest": env_digest,
-            "image_id": image.id if image else None,
+            "image_id": image.image_id if image else None,
         }
     manifest = build_manifest(
         prompt_wrapper_version=PROMPT_WRAPPER_VERSION,

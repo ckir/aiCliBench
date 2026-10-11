@@ -1,3 +1,4 @@
+import contextlib
 import json
 from pathlib import Path
 
@@ -133,3 +134,37 @@ def test_scheduler_records_gate_results(tmp_path: Path):
     ).fetchone()
     assert json.loads(stored[0])["tasks"]["example-task"] == entry
     assert all(r["environment_digest"] == entry["environment_digest"] for r in runs)
+
+
+def test_manifest_records_image_id_in_docker_mode(tmp_path: Path, monkeypatch):
+    from ai_benchmark import scheduler
+    from ai_benchmark.provenance import ImageInfo
+
+    monkeypatch.setattr(
+        scheduler, "inspect_image", lambda tag: ImageInfo(image_id="sha256:abc", size_bytes=1)
+    )
+    # use_docker=None would auto-detect; force the manifest path via a stub
+    monkeypatch.setattr("ai_benchmark.docker_runner.docker_available", lambda: True)
+
+    def _stop(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(scheduler, "_run_once", _stop)
+    with contextlib.suppress(KeyboardInterrupt):
+        run_experiment(
+            config=BenchmarkConfig(),
+            tasks_root=Path("tasks"),
+            request=ExperimentRequest(
+                suite="pilot",
+                task_ids=["example-task"],
+                agent_names=["claude"],
+                repeat_count=1,
+            ),
+            adapters={"claude": FakeAgentAdapter(agent_name="claude", mode="pass")},
+            db_path=tmp_path / "c.sqlite3",
+            runs_dir=tmp_path / "runs",
+            experiment_id="exp_img",
+            use_docker=True,
+        )
+    manifest = json.loads((tmp_path / "runs" / "exp_img" / "manifest.json").read_text())
+    assert manifest["tasks"]["example-task"]["image_id"] == "sha256:abc"
