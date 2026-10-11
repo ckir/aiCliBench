@@ -121,9 +121,22 @@ class TaskScoring(BaseModel):
     model_config = {"extra": "forbid"}
 
     acceptance_weight: float = Field(default=1.0, ge=0)
-    build_required: bool = True
+    build_required: bool = False
     lint_required: bool = False
     typecheck_required: bool = False
+    build_command: list[str] = Field(default_factory=list)
+    lint_command: list[str] = Field(default_factory=list)
+    typecheck_command: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _check_gate_commands(self) -> TaskScoring:
+        if self.build_required and not self.build_command:
+            raise ValueError("build_required needs build_command")
+        if self.lint_required and not self.lint_command:
+            raise ValueError("lint_required needs lint_command")
+        if self.typecheck_required and not self.typecheck_command:
+            raise ValueError("typecheck_required needs typecheck_command")
+        return self
 
 
 class TaskDefinition(BaseModel):

@@ -5,6 +5,7 @@ from ai_schemas import (
     AgentCapability,
     BenchmarkConfig,
     TaskDefinition,
+    TaskScoring,
     UsageRecord,
 )
 from ai_schemas.codebench import PROMPT_WRAPPER_PREAMBLE, PROMPT_WRAPPER_VERSION
@@ -71,3 +72,13 @@ def test_capability_defaults():
 def test_prompt_wrapper_versioned():
     assert PROMPT_WRAPPER_VERSION.startswith("codebench-")
     assert "hidden" in PROMPT_WRAPPER_PREAMBLE.lower()
+
+
+def test_task_scoring_gate_defaults_and_required_needs_command():
+    scoring = TaskScoring()
+    assert scoring.build_required is False
+    assert scoring.build_command == []
+    with pytest.raises(PydanticValidationError):  # pydantic.ValidationError
+        TaskScoring(lint_required=True)
+    ok = TaskScoring(typecheck_required=True, typecheck_command=["python3", "-m", "mypy", "."])
+    assert ok.typecheck_required is True
