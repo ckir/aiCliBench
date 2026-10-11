@@ -26,6 +26,7 @@ from ai_benchmark.storage import (
     list_experiments,
     runs_for_experiment,
 )
+from ai_benchmark.task_materialize import materialize_repo
 from ai_benchmark.task_registry import discover_tasks, validate_task
 from ai_core.errors import ConfigurationError
 
@@ -342,6 +343,81 @@ def tasks_materialize(
             failed = True
     if failed and not repin:
         raise typer.Exit(code=EXIT_TASK)
+
+
+@tasks_app.command("verify")
+def tasks_verify(
+    task_id: Annotated[str | None, typer.Argument(help="Task ID (default: all)")] = None,
+    suite: Annotated[str | None, typer.Option(help="Suite name")] = None,
+    docker: Annotated[bool, typer.Option(help="Use Docker for evaluation")] = False,
+    no_docker: Annotated[bool, typer.Option(help="Disable Docker for evaluation")] = False,
+) -> None:
+    """Verify task oracles: original fails, solution passes (§11.4)."""
+    from ai_benchmark.task_verify import verify_task
+    from ai_benchmark.task_registry import discover_tasks
+
+    if docker and no_docker:
+        typer.echo("Cannot use both --docker and --no-docker", err=True)
+        raise typer.Exit(code=EXIT_CONFIG)
+    use_docker = docker and not no_docker
+
+    root = _tasks_root()
+    try:
+        tasks = discover_tasks(root, suite=suite)
+    except ConfigurationError as exc:
+        typer.echo(f"Cannot load tasks: {exc}", err=True)
+        raise typer.Exit(code=EXIT_TASK) from exc
+    selected = [t for t in tasks if task_id is None or t.definition.id == task_id]
+    if task_id is not None and not selected:
+        typer.echo(f"Task not found: {task_id}", err=True)
+        raise typer.Exit(code=EXIT_TASK)
+    failed = False
+    for loaded in selected:
+        task = loaded.definition
+        typer.echo(f"Verifying {task.id}...", nl=False)
+        try:
+            result = verify_task(loaded.task_dir, work_dir=Path("/tmp") / f"codebench-verify-{task.id}", use_docker=use_docker)
+        except Exception as exc:
+            typer.echo(f" ERROR: {exc}")
+            failed = True
+            continue
+        if result.ok:
+            typer.echo(" OK (original fail, solution pass)")
+        else:
+            typer.echo(" BROKEN")
+            for err in result.errors:
+                typer.echo(f"  - {err}")
+            failed = True
+    if failed:
+        raise typer.Exit(code=EXIT_TASK)
+
+
+@tasks_app.command("init")
+def tasks_init(
+    task_id: Annotated[str, typer.Argument(help="Task ID")],
+    title: Annotated[str, typer.Option(help="Task title")],
+    category: Annotated[str, typer.Option(help="Task category (e.g., bugfix, feature)")],
+    suite: Annotated[str | None, typer.Option(help="Suite name")] = None,
+    description: Annotated[str, typer.Option(help="Task description")] = "",
+) -> None:
+    """Scaffold a new verifiable task directory (§7.1, §11.4)."""
+    from ai_benchmark.task_scaffold import scaffold_task
+
+    root = _tasks_root()
+    effective_suite = suite or "pilot"
+    try:
+        task_dir = scaffold_task(
+            tasks_root=root,
+            task_id=task_id,
+            suite=effective_suite,
+            title=title,
+            category=category,
+            description=description,
+        )
+    except ConfigurationError as exc:
+        typer.echo(f"Failed to create task: {exc}", err=True)
+        raise typer.Exit(code=EXIT_TASK) from exc
+    typer.echo(f"Created {task_dir} (commit {materialize_repo(task_dir, check=False).commit[:12]})")
 
 
 @app.command()

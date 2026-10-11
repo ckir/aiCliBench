@@ -9,6 +9,7 @@ from ai_benchmark.provenance import (
     inspect_image,
     update_experiment_provenance,
 )
+from ai_benchmark.task_scaffold import scaffold_task
 from ai_benchmark.task_verify import TaskVerification, apply_solution, verify_task
 
 __all__: list[str] = [
@@ -22,4 +23,5 @@ __all__: list[str] = [
     "environment_digest",
     "inspect_image",
     "update_experiment_provenance",
+    "scaffold_task",
 ]
