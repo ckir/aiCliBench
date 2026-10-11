@@ -43,17 +43,21 @@ model comparison.</div>
 {% endif %}
 
 <h2>3. Overall pass rate (numerators and denominators)</h2>
-<table><tr><th>Agent</th><th>Passes</th><th>Eligible</th><th>Pass rate</th></tr>
+<table><tr><th>Agent</th><th>Passes</th><th>Eligible</th><th>Pass rate</th><th>95% CI</th></tr>
 {% for agent, row in correctness.items() %}
 <tr><td>{{ agent }}</td><td>{{ row.passes }}</td>
-<td>{{ row.eligible }}</td><td>{{ row.rate }}</td></tr>
+<td>{{ row.eligible }}</td><td>{{ row.rate }}</td><td>{{ row.ci }}</td></tr>
 {% endfor %}
 </table>
 
 <h2>4. Paired task outcomes</h2>
 <p>A wins {{ paired.a_wins }}, B wins {{ paired.b_wins }},
 both pass {{ paired.both_pass }}, neither {{ paired.neither_pass }},
-invalid {{ paired.invalid }} (total {{ paired.total_pairs }}).</p>
+invalid {{ paired.invalid }} (total {{ paired.total_pairs }}).
+{% if paired.decisive_pairs > 0 and paired.sign_test_p_value is not none and paired.delta_ci95 is not none %}
+Decisive pairs: {{ paired.decisive_pairs }}, sign test p={{ "%.3f"|format(paired.sign_test_p_value) }},
+delta(A-B) 95% CI [{{ "%.2f"|format(paired.delta_ci95[0]) }}, {{ "%.2f"|format(paired.delta_ci95[1]) }}].
+{% else %}Fewer than 10 decisive pairs.{% endif %}</p>
 
 <h2>5. Per-category pass rates</h2>
 <table><tr><th>Agent</th><th>Passes</th><th>Eligible</th></tr>
@@ -168,10 +172,15 @@ def render_report(
     cost: dict[str, dict[str, str]] = {}
     for agent, summary in score.by_agent.items():
         rate = f"{summary.pass_rate:.2%}" if summary.pass_rate is not None else "n/a"
+        ci = "n/a"
+        if summary.pass_rate_ci95 is not None:
+            lo, hi = summary.pass_rate_ci95
+            ci = f"[{lo:.1%}, {hi:.1%}]"
         correctness[agent] = {
             "passes": str(summary.acceptance_passes),
             "eligible": str(summary.eligible_evaluations),
             "rate": rate,
+            "ci": ci,
         }
         errors[agent] = {
             "timeout": f"{summary.timeout_rate:.1%}",
@@ -213,6 +222,11 @@ def render_report(
             "neither_pass": score.paired.neither_pass,
             "invalid": score.paired.invalid,
             "total_pairs": score.paired.total_pairs,
+            "decisive_pairs": score.paired.decisive_pairs,
+            "sign_test_p_value": score.paired.sign_test_p_value,
+            "delta_ci95": score.paired.delta_ci95,
+            "agent_a": score.paired.agent_a,
+            "agent_b": score.paired.agent_b,
         }
     else:
         paired = {
@@ -222,6 +236,11 @@ def render_report(
             "neither_pass": 0,
             "invalid": 0,
             "total_pairs": 0,
+            "decisive_pairs": 0,
+            "sign_test_p_value": None,
+            "delta_ci95": None,
+            "agent_a": "",
+            "agent_b": "",
         }
 
     per_task = [

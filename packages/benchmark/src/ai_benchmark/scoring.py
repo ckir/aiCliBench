@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import math
+import random
 import statistics
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Sequence
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +19,7 @@ class CorrectnessSummary:
     agent_error_rate: float
     setup_error_rate: float
     evaluation_error_rate: float
+    pass_rate_ci95: tuple[float, float] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -28,6 +31,11 @@ class PairedSummary:
     neither_pass: int
     invalid: int
     win_rate_a: float | None  # among valid decisive pairs
+    decisive_pairs: int = 0
+    sign_test_p_value: float | None = None
+    delta_ci95: tuple[float, float] | None = None
+    agent_a: str = ""
+    agent_b: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +73,68 @@ def _parse_usage(usage_json: str) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def wilson_interval(successes: int, n: int, *, z: float = 1.959964) -> tuple[float, float] | None:
+    """Wilson score interval for binomial proportion (95% CI by default)."""
+    if n == 0:
+        return None
+    p = successes / n
+    denominator = 1 + z * z / n
+    centre = p + z * z / (2 * n)
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+    low = (centre - half) / denominator
+    high = (centre + half) / denominator
+    return (max(0.0, low), min(1.0, high))
+
+
+def sign_test_p_value(a_wins: int, b_wins: int) -> float | None:
+    """Exact two-sided sign test p-value."""
+    n = a_wins + b_wins
+    if n == 0:
+        return None
+    k = min(a_wins, b_wins)
+    # Sum of binomial probabilities from 0 to k, times 2
+    total = 0.0
+    for i in range(k + 1):
+        total += math.comb(n, i)
+    p = 2 * total / (2 ** n)
+    return min(1.0, p)
+
+
+def _quantile_sorted(values: list[float], quantile: float) -> float:
+    if not values:
+        raise ValueError("empty")
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    fraction = position - lower
+    return ordered[lower] * (1 - fraction) + ordered[upper] * fraction
+
+
+def paired_bootstrap_delta_ci(
+    outcomes: Sequence[tuple[bool, bool]],
+    *,
+    resamples: int = 2000,
+    seed: int = 20261010,
+) -> tuple[float, float] | None:
+    """Paired bootstrap confidence interval for difference in pass rates (A - B)."""
+    if not outcomes:
+        return None
+    rng = random.Random(seed)
+    n = len(outcomes)
+    deltas: list[float] = []
+    for _ in range(resamples):
+        # Resample with replacement
+        sample = [outcomes[rng.randrange(n)] for _ in range(n)]
+        a_mean = sum(1 for a, _ in sample if a) / n
+        b_mean = sum(1 for _, b in sample if b) / n
+        deltas.append(a_mean - b_mean)
+    deltas.sort()
+    lo = deltas[int(0.025 * resamples)]
+    hi = deltas[int(0.975 * resamples)]
+    return (lo, hi)
+
+
 def correctness_for_agent(
     runs: list[dict[str, Any]], evaluations: dict[str, dict[str, Any]]
 ) -> CorrectnessSummary:
@@ -96,6 +166,7 @@ def correctness_for_agent(
         if evaluation.get("acceptance_pass") in (1, True):
             passes += 1
     denominator = max(len(runs), 1)
+    ci = wilson_interval(passes, eligible) if eligible else None
     return CorrectnessSummary(
         eligible_evaluations=eligible,
         acceptance_passes=passes,
@@ -104,6 +175,7 @@ def correctness_for_agent(
         agent_error_rate=agent_errors / denominator,
         setup_error_rate=setup_errors / denominator,
         evaluation_error_rate=eval_errors / denominator,
+        pass_rate_ci95=ci,
     )
 
 
@@ -147,6 +219,25 @@ def paired_summary(
             neither += 1
     total = a_wins + b_wins + both + neither + invalid
     decisive = a_wins + b_wins
+    p_value = sign_test_p_value(a_wins, b_wins)
+    # Build outcomes for bootstrap: (a_pass, b_pass) for each valid pair
+    outcomes: list[tuple[bool, bool]] = []
+    for _pair_key, members in by_pair.items():
+        if agent_a not in members or agent_b not in members:
+            continue
+        eval_a = evaluations.get(str(members[agent_a].get("id", "")))
+        eval_b = evaluations.get(str(members[agent_b].get("id", "")))
+        if eval_a is None or eval_b is None:
+            continue
+        if (
+            str(eval_a.get("status")) == "evaluation_error"
+            or str(eval_b.get("status")) == "evaluation_error"
+        ):
+            continue
+        pass_a = eval_a.get("acceptance_pass") in (1, True)
+        pass_b = eval_b.get("acceptance_pass") in (1, True)
+        outcomes.append((pass_a, pass_b))
+    ci = paired_bootstrap_delta_ci(outcomes) if outcomes else None
     return PairedSummary(
         total_pairs=total,
         a_wins=a_wins,
@@ -155,6 +246,11 @@ def paired_summary(
         neither_pass=neither,
         invalid=invalid,
         win_rate_a=(a_wins / decisive) if decisive else None,
+        decisive_pairs=decisive,
+        sign_test_p_value=p_value,
+        delta_ci95=ci,
+        agent_a=agent_a,
+        agent_b=agent_b,
     )
 
 

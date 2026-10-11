@@ -1,9 +1,14 @@
+import pytest
+
 from ai_benchmark.scoring import (
     correctness_for_agent,
     cost_for_agent,
+    paired_bootstrap_delta_ci,
     paired_summary,
     runtime_for_agent,
     score_experiment,
+    sign_test_p_value,
+    wilson_interval,
 )
 
 
@@ -115,3 +120,45 @@ def test_quality_gate_counts():
     assert gates["build_total"] == 2
     assert gates["lint_pass"] == 0
     assert gates["lint_total"] == 0
+
+
+def test_wilson_known_value():
+    low, high = wilson_interval(3, 4)
+    assert low == pytest.approx(0.3006, abs=1e-3)
+    assert high == pytest.approx(0.9545, abs=1e-3)
+    assert wilson_interval(0, 0) is None
+
+
+def test_sign_test_values():
+    assert sign_test_p_value(8, 0) == pytest.approx(0.0078125)
+    assert sign_test_p_value(3, 2) == 1.0
+    assert sign_test_p_value(0, 0) is None
+
+
+def test_bootstrap_deterministic_and_bounded():
+    outs = [(True, False)] * 6 + [(True, True)] * 2 + [(False, True)] * 2
+    ci = paired_bootstrap_delta_ci(outs)
+    assert ci == paired_bootstrap_delta_ci(outs)
+    assert -1.0 <= ci[0] <= 0.4 <= ci[1] <= 1.0
+    assert paired_bootstrap_delta_ci([(True, False)] * 5) == (1.0, 1.0)
+
+
+def test_paired_summary_carries_statistics():
+    runs = [
+        {**_run("a1", "claude", "completed"), "pair_key": "t:1"},
+        {**_run("b1", "antigravity", "completed"), "pair_key": "t:1"},
+        {**_run("a2", "claude", "completed"), "pair_key": "t:2"},
+        {**_run("b2", "antigravity", "completed"), "pair_key": "t:2"},
+    ]
+    evals = {
+        "a1": {"status": "pass", "acceptance_pass": 1},
+        "b1": {"status": "fail", "acceptance_pass": 0},
+        "a2": {"status": "pass", "acceptance_pass": 1},
+        "b2": {"status": "pass", "acceptance_pass": 1},
+    }
+    paired = paired_summary(runs, evals, "antigravity", "claude")
+    assert paired.decisive_pairs == 1
+    assert paired.sign_test_p_value == 1.0
+    assert paired.delta_ci95 is not None
+    assert paired.agent_a == "antigravity"
+    assert paired.agent_b == "claude"

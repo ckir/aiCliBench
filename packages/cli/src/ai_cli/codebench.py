@@ -493,9 +493,13 @@ def compare(
     score = score_experiment(runs, evaluations)
     for agent, summary in score.by_agent.items():
         rate = f"{summary.pass_rate:.2%}" if summary.pass_rate is not None else "n/a"
+        ci = "n/a"
+        if summary.pass_rate_ci95 is not None:
+            lo, hi = summary.pass_rate_ci95
+            ci = f"95% CI {lo:.0%}–{hi:.0%}"
         typer.echo(
             f"{agent}: {summary.acceptance_passes}/{summary.eligible_evaluations} "
-            f"pass ({rate}); timeout {summary.timeout_rate:.0%}, "
+            f"pass ({rate}, {ci}); timeout {summary.timeout_rate:.0%}, "
             f"agent-error {summary.agent_error_rate:.0%}"
         )
     if score.paired is not None:
@@ -504,6 +508,16 @@ def compare(
             f"both {score.paired.both_pass}, neither {score.paired.neither_pass}, "
             f"invalid {score.paired.invalid}"
         )
+        if score.paired.decisive_pairs > 0:
+            p = score.paired.sign_test_p_value
+            lo, hi = score.paired.delta_ci95
+            typer.echo(
+                f"paired stats: A={score.paired.agent_a} B={score.paired.agent_b}, "
+                f"decisive {score.paired.decisive_pairs}, sign-test p={p:.3f}, "
+                f"delta(A-B) 95% CI [{lo:+.2f}, {hi:+.2f}]"
+            )
+        else:
+            typer.echo("paired stats: fewer than 10 decisive pairs")
     for agent, runtime in score.runtime_by_agent.items():
         median = runtime.median_success_seconds
         median_str = f"{median}s" if median is not None else "n/a"
