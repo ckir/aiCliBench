@@ -1,11 +1,7 @@
 """Generic CLI adapter tests with fake executables."""
 
-import json
-import os
 import stat
 from pathlib import Path
-
-import pytest
 
 from ai_core.status import RunStatus
 from ai_integration_generic_cli.adapter import GenericCliAdapter
@@ -107,8 +103,10 @@ def test_prompt_placeholder_substituted(tmp_path: Path):
         f'printf "%s" "$2" > {received}\n'
         'echo \'{"result": "ok"}\'; exit 0\n',
     )
-    adapter = GenericCliAdapter("mycli", GenericCliConfig(command=cli, args=["--ask", "{prompt}", "--quiet"]))
-    tricky = 'quotes "\' $(rm -rf /) `id`;\nunicode héllo\nnewline\n$(evil)'
+    adapter = GenericCliAdapter(
+        "mycli", GenericCliConfig(command=cli, args=["--ask", "{prompt}", "--quiet"])
+    )
+    tricky = "quotes \"' $(rm -rf /) `id`;\nunicode héllo\nnewline\n$(evil)"
     result = adapter.run(
         prompt=tricky,
         workdir=tmp_path,
@@ -129,7 +127,7 @@ def test_prompt_appended_when_no_placeholder(tmp_path: Path):
         'if [ "$1" = "--help" ]; then echo ""; exit 0; fi\n'
         'if [ "$1" = "--version" ]; then echo "1.0"; exit 0; fi\n'
         # Prompt is the last argument (after --output-format)
-        f'printf "%s" "$' + '{@: -1}" > ' + str(received) + '\n'
+        'printf "%s" "$' + '{@: -1}" > ' + str(received) + "\n"
         'echo \'{"result": "ok"}\'; exit 0\n',
     )
     adapter = GenericCliAdapter("mycli", GenericCliConfig(command=cli, args=["--quiet"]))
@@ -152,8 +150,8 @@ def test_model_flag_appended(tmp_path: Path):
         "#!/bin/bash\n"
         'if [ "$1" = "--help" ]; then echo "--model --output-format"; exit 0; fi\n'
         'if [ "$1" = "--version" ]; then echo "1.0"; exit 0; fi\n'
-        # Model flag value is the 5th argument (--quiet --output-format text --model my-model prompt)
-        f'printf "%s" "$5" > {received}\n'
+        # argv: --quiet --model my-model <prompt>; the model value is $3
+        f'printf "%s" "$3" > {received}\n'
         'echo \'{"result": "ok"}\'; exit 0\n',
     )
     adapter = GenericCliAdapter(

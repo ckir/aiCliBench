@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import shutil
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from ai_benchmark.evaluator import GateSpec, run_evaluation
 from ai_benchmark.task_materialize import materialize_repo
-from ai_benchmark.task_registry import load_task, resolve_repository, resolve_evaluator_command
+from ai_benchmark.task_registry import load_task, resolve_evaluator_command, resolve_repository
 from ai_benchmark.workspace import checkout_fresh
 from ai_core.errors import ConfigurationError
 from ai_core.status import EvalStatus
@@ -160,7 +158,7 @@ def verify_task(task_dir: Path, *, work_dir: Path, use_docker: bool = False) -> 
             original_status=orig_result.status,
             solution_status=None,
             ok=False,
-            errors=(f"checkout solution failed: {exc}",) + tuple(errors),
+            errors=(f"checkout solution failed: {exc}", *errors),
         )
 
     # Apply solution overlay
@@ -172,7 +170,7 @@ def verify_task(task_dir: Path, *, work_dir: Path, use_docker: bool = False) -> 
             original_status=orig_result.status,
             solution_status=None,
             ok=False,
-            errors=(f"apply solution failed: {exc}",) + tuple(errors),
+            errors=(f"apply solution failed: {exc}", *errors),
         )
 
     # Evaluate solution
@@ -194,7 +192,7 @@ def verify_task(task_dir: Path, *, work_dir: Path, use_docker: bool = False) -> 
             original_status=orig_result.status,
             solution_status=None,
             ok=False,
-            errors=(f"solution evaluation error: {exc}",) + tuple(errors),
+            errors=(f"solution evaluation error: {exc}", *errors),
         )
 
     if sol_result.status != EvalStatus.PASS:

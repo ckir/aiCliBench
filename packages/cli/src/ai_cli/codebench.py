@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import tempfile
 from contextlib import suppress
 from pathlib import Path
 from typing import Annotated, Any
@@ -306,7 +307,7 @@ def tasks_materialize(
     repin: Annotated[bool, typer.Option(help="Update pinned commit in task.toml")] = False,
 ) -> None:
     """Materialize task repositories from source/ (§7.3)."""
-    from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
+    from ai_benchmark.task_materialize import MaterializeMismatchError, materialize_repo
     from ai_benchmark.task_registry import discover_tasks
 
     root = _tasks_root()
@@ -324,19 +325,23 @@ def tasks_materialize(
         task = loaded.definition
         try:
             result = materialize_repo(loaded.task_dir, force=force, check=not repin)
+            commit = result.commit or ""
             if result.action == "generated":
-                typer.echo(f"  {task.id}: GENERATED (commit {result.commit[:12]})")
+                typer.echo(f"  {task.id}: GENERATED (commit {commit[:12]})")
                 if repin:
                     from ai_benchmark.task_materialize import repin_task
 
-                    repin_task(loaded.task_dir, result.commit)
-                    typer.echo(f"  {task.id}: PINNED to {result.commit[:12]}")
+                    repin_task(loaded.task_dir, commit)
+                    typer.echo(f"  {task.id}: PINNED to {commit[:12]}")
             elif result.action == "kept":
-                typer.echo(f"  {task.id}: KEPT (commit {result.commit[:12]})")
+                typer.echo(f"  {task.id}: KEPT (commit {commit[:12]})")
             elif result.action == "skipped":
                 typer.echo(f"  {task.id}: SKIPPED (not task-relative or no source/)")
         except MaterializeMismatchError as exc:
-            typer.echo(f"  {task.id}: MISMATCH (expected {exc.expected[:12]}, got {exc.actual[:12]})", err=True)
+            typer.echo(
+                f"  {task.id}: MISMATCH (expected {exc.expected[:12]}, got {exc.actual[:12]})",
+                err=True,
+            )
             failed = True
         except ConfigurationError as exc:
             typer.echo(f"  {task.id}: ERROR: {exc}", err=True)
@@ -353,8 +358,8 @@ def tasks_verify(
     no_docker: Annotated[bool, typer.Option(help="Disable Docker for evaluation")] = False,
 ) -> None:
     """Verify task oracles: original fails, solution passes (§11.4)."""
-    from ai_benchmark.task_verify import verify_task
     from ai_benchmark.task_registry import discover_tasks
+    from ai_benchmark.task_verify import verify_task
 
     if docker and no_docker:
         typer.echo("Cannot use both --docker and --no-docker", err=True)
@@ -376,7 +381,8 @@ def tasks_verify(
         task = loaded.definition
         typer.echo(f"Verifying {task.id}...", nl=False)
         try:
-            result = verify_task(loaded.task_dir, work_dir=Path("/tmp") / f"codebench-verify-{task.id}", use_docker=use_docker)
+            with tempfile.TemporaryDirectory(prefix=f"codebench-verify-{task.id}-") as work:
+                result = verify_task(loaded.task_dir, work_dir=Path(work), use_docker=use_docker)
         except Exception as exc:
             typer.echo(f" ERROR: {exc}")
             failed = True
@@ -417,7 +423,9 @@ def tasks_init(
     except ConfigurationError as exc:
         typer.echo(f"Failed to create task: {exc}", err=True)
         raise typer.Exit(code=EXIT_TASK) from exc
-    typer.echo(f"Created {task_dir} (commit {materialize_repo(task_dir, check=False).commit[:12]})")
+    typer.echo(
+        f"Created {task_dir} (commit {(materialize_repo(task_dir, check=False).commit or '')[:12]})"
+    )
 
 
 @app.command()
@@ -572,7 +580,7 @@ def compare(
         ci = "n/a"
         if summary.pass_rate_ci95 is not None:
             lo, hi = summary.pass_rate_ci95
-            ci = f"95% CI {lo:.0%}–{hi:.0%}"
+            ci = f"95% CI {lo:.0%}-{hi:.0%}"
         typer.echo(
             f"{agent}: {summary.acceptance_passes}/{summary.eligible_evaluations} "
             f"pass ({rate}, {ci}); timeout {summary.timeout_rate:.0%}, "
@@ -584,16 +592,19 @@ def compare(
             f"both {score.paired.both_pass}, neither {score.paired.neither_pass}, "
             f"invalid {score.paired.invalid}"
         )
-        if score.paired.decisive_pairs > 0:
-            p = score.paired.sign_test_p_value
-            lo, hi = score.paired.delta_ci95
+        ci = score.paired.delta_ci95
+        p = score.paired.sign_test_p_value
+        if score.paired.decisive_pairs > 0 and ci is not None and p is not None:
+            lo, hi = ci
             typer.echo(
                 f"paired stats: A={score.paired.agent_a} B={score.paired.agent_b}, "
                 f"decisive {score.paired.decisive_pairs}, sign-test p={p:.3f}, "
                 f"delta(A-B) 95% CI [{lo:+.2f}, {hi:+.2f}]"
             )
+            if score.paired.decisive_pairs < 10:
+                typer.echo("caution: fewer than 10 decisive pairs; interval is wide")
         else:
-            typer.echo("paired stats: fewer than 10 decisive pairs")
+            typer.echo("paired stats: no decisive pairs")
     for agent, runtime in score.runtime_by_agent.items():
         median = runtime.median_success_seconds
         median_str = f"{median}s" if median is not None else "n/a"
@@ -615,9 +626,21 @@ def compare(
         typer.echo(f"Warning: experiment status is {record['status']}; results incomplete.")
     # Quality gate counts
     for agent, gates in score.quality_gates.items():
-        build = f"{gates.get('build_pass', 0)}/{gates.get('build_total', 0)}" if gates.get('build_total', 0) else "n/a"
-        lint = f"{gates.get('lint_pass', 0)}/{gates.get('lint_total', 0)}" if gates.get('lint_total', 0) else "n/a"
-        typecheck = f"{gates.get('typecheck_pass', 0)}/{gates.get('typecheck_total', 0)}" if gates.get('typecheck_total', 0) else "n/a"
+        build = (
+            f"{gates.get('build_pass', 0)}/{gates.get('build_total', 0)}"
+            if gates.get("build_total", 0)
+            else "n/a"
+        )
+        lint = (
+            f"{gates.get('lint_pass', 0)}/{gates.get('lint_total', 0)}"
+            if gates.get("lint_total", 0)
+            else "n/a"
+        )
+        typecheck = (
+            f"{gates.get('typecheck_pass', 0)}/{gates.get('typecheck_total', 0)}"
+            if gates.get("typecheck_total", 0)
+            else "n/a"
+        )
         typer.echo(f"{agent} gates: build {build}, lint {lint}, typecheck {typecheck}")
 
 

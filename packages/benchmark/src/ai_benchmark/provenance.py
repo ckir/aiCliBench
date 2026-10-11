@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
+import sqlite3
 import subprocess
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -67,8 +66,15 @@ def inspect_image(tag: str) -> ImageInfo | None:
         ImageInfo if successful, None otherwise
     """
     try:
-        result = subprocess.run(
-            ["docker", "image", "inspect", "--format", "{{.Id}} {{.Size}}", tag],
+        result = subprocess.run(  # noqa: S603 - fixed arg list, no shell
+            [  # noqa: S607 - intentional PATH lookup of explicit tool
+                "docker",
+                "image",
+                "inspect",
+                "--format",
+                "{{.Id}} {{.Size}}",
+                tag,
+            ],
             capture_output=True,
             text=True,
             timeout=30,
@@ -161,10 +167,8 @@ _MIGRATIONS: dict[int, list[str]] = {
 }
 
 
-def connect_with_migrations(path: Path) -> "sqlite3.Connection":
+def connect_with_migrations(path: Path) -> sqlite3.Connection:
     """Open the database, enforce FK, and apply migrations."""
-    import sqlite3
-
     path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(path))
     conn.execute("PRAGMA foreign_keys = ON")
@@ -198,7 +202,7 @@ def connect_with_migrations(path: Path) -> "sqlite3.Connection":
 
 
 def update_experiment_provenance(
-    conn: "sqlite3.Connection", experiment_id: str, provenance_json: str
+    conn: sqlite3.Connection, experiment_id: str, provenance_json: str
 ) -> None:
     """Update the provenance_json column for an experiment."""
     conn.execute(

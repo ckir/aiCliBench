@@ -1,4 +1,10 @@
-"""Generic CLI adapter implementing AgentAdapter protocol."""
+"""Generic CLI adapter implementing AgentAdapter protocol.
+
+Provides a flexible adapter for any CLI agent that follows common patterns:
+- Prompt passed as argument or via {prompt} placeholder in args
+- Model selection via configurable flag
+- JSON, JSONL, or text output parsing
+"""
 
 from __future__ import annotations
 
@@ -8,19 +14,23 @@ import subprocess
 import time
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
 
 from ai_agents.adapter import RunResult, categorize_exit
-from ai_core.errors import ConfigurationError
 from ai_core.status import ErrorCategory, RunStatus
 from ai_integration_generic_cli.config import GenericCliConfig
 from ai_schemas.codebench import AgentCapability, UsageRecord
 
 
-def _parse_output(
-    stdout: str, fmt: str
-) -> tuple[str, str | None, UsageRecord]:
-    """Parse CLI output based on format."""
+def _parse_output(stdout: str, fmt: str) -> tuple[str, str | None, UsageRecord]:
+    """Parse CLI output based on format.
+
+    Args:
+        stdout: Raw stdout from the CLI process.
+        fmt: Output format ("json", "jsonl", or "text").
+
+    Returns:
+        Tuple of (response_text, reported_model, usage_record).
+    """
     if fmt == "json":
         try:
             payload = json.loads(stdout.strip())
@@ -82,22 +92,37 @@ def _parse_output(
 
 
 class GenericCliAdapter:
-    """Subprocess adapter for a generic CLI agent."""
+    """Subprocess adapter for a generic CLI agent.
+
+    Implements the AgentAdapter protocol for any CLI that follows common
+    conventions for prompt passing, output formatting, and model selection.
+    """
 
     def __init__(self, name: str, config: GenericCliConfig) -> None:
+        """Initialize the adapter.
+
+        Args:
+            name: Unique agent identifier (used for logging/results).
+            config: Adapter configuration with command, args, and format options.
+        """
         self._name = name
         self._config = config
         self._help_cache: str | None = None
 
     @property
     def agent_name(self) -> str:
+        """Return the agent identifier."""
         return self._name
 
     @property
     def capability(self) -> AgentCapability:
+        """Return the adapter's capabilities by probing the CLI's --help.
+
+        Returns:
+            AgentCapability with feature flags based on supported CLI flags.
+        """
         help_text = self._help()
         has_model_flag = bool(self._config.model_flag) and self._config.model_flag in help_text
-        has_output_format = "--output-format" in help_text
         has_usage = "usage" in help_text.lower()
         return AgentCapability(
             agent_name=self._name,
@@ -112,6 +137,7 @@ class GenericCliAdapter:
         )
 
     def _help(self) -> str:
+        """Get and cache the CLI's help text."""
         if self._help_cache is None:
             try:
                 result = subprocess.run(  # noqa: S603
@@ -126,6 +152,12 @@ class GenericCliAdapter:
         return self._help_cache
 
     def version(self) -> str | None:
+        """Get the CLI version string.
+
+        Returns:
+            Version string from the configured version flags,
+            or None if unavailable.
+        """
         for flag in self._config.version_args:
             try:
                 result = subprocess.run(  # noqa: S603
@@ -143,6 +175,11 @@ class GenericCliAdapter:
         return None
 
     def check(self) -> dict[str, object]:
+        """Non-destructive health probe (no paid/state-changing tasks).
+
+        Returns:
+            Dictionary with keys: agent, available, command, version, capability.
+        """
         command = self._config.command
         available = shutil.which(command) is not None
         return {
@@ -154,8 +191,14 @@ class GenericCliAdapter:
         }
 
     def build_argv(self, prompt: str) -> list[str]:
-        """Build arg list with prompt substitution."""
-        help_text = self._help()
+        """Build arg list with prompt substitution.
+
+        Args:
+            prompt: The prompt to send to the agent.
+
+        Returns:
+            List of command-line arguments with prompt substituted.
+        """
         argv: list[str] = [self._config.command]
         # Substitute {prompt} placeholders in args
         prompt_substituted = False
@@ -165,11 +208,8 @@ class GenericCliAdapter:
                 prompt_substituted = True
             else:
                 argv.append(arg)
-        # Add output format before prompt (if no placeholder)
-        if has_output_format := ("--output-format" in help_text) and self._config.output_format:
-            argv += ["--output-format", self._config.output_format]
-        # Add model flag before prompt (if no placeholder)
-        if self._config.model and self._config.model_flag and self._config.model_flag in help_text:
+        # Model flag only when both flag and model are configured (no --help probing)
+        if self._config.model and self._config.model_flag:
             argv += [self._config.model_flag, self._config.model]
         if not prompt_substituted:
             argv.append(prompt)
@@ -185,6 +225,19 @@ class GenericCliAdapter:
         events_path: Path | None,
         timeout_seconds: float,
     ) -> RunResult:
+        """Execute the agent subprocess; enforce timeout; never use shell strings.
+
+        Args:
+            prompt: The prompt to send to the agent.
+            workdir: Working directory for the subprocess.
+            stdout_path: File path to capture stdout.
+            stderr_path: File path to capture stderr.
+            events_path: Optional file path for event stream (JSONL).
+            timeout_seconds: Maximum execution time in seconds.
+
+        Returns:
+            RunResult with execution outcome and captured output.
+        """
         from ai_benchmark.redaction import redact_text as _redact
 
         started_at = datetime.now(UTC).isoformat()

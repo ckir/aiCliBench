@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import stat
 from pathlib import Path
 
 from ai_benchmark.task_materialize import materialize_repo, repin_task
 from ai_benchmark.task_registry import validate_task
 from ai_core.errors import ConfigurationError
-
 
 RUN_TESTS_SH = """#!/bin/bash
 # Trusted acceptance command. Runs hidden tests only; agent must not see these.
@@ -36,7 +34,8 @@ RUN pip install --no-cache-dir pytest
 
 INSTRUCTION_MD = """Fix the `greet(name)` function in `app.py` so that it returns a proper greeting.
 
-The function currently returns `\"Hello, \"` without the name. It should return `\"Hello, {name}!\"`.
+The function currently returns `\"Hello, \"` without the name.
+It should return `\"Hello, {name}!\"`.
 
 **Constraints:**
 - Do not modify any tests, evaluator scripts, or task metadata.
@@ -157,9 +156,6 @@ def scaffold_task(
     (task_dir / "evaluator" / "tests").mkdir(parents=True)
     (task_dir / "solution" / "files").mkdir(parents=True)
 
-    # Generate a placeholder commit (will be replaced after materialization)
-    placeholder_commit = "0" * 40
-
     # Write task.toml
     toml_content = TASK_TOML_TEMPLATE.format(
         task_id=task_id,
@@ -182,7 +178,9 @@ def scaffold_task(
     # Write evaluator files
     (task_dir / "evaluator" / "run_tests.sh").write_text(RUN_TESTS_SH, encoding="utf-8")
     (task_dir / "evaluator" / "run_tests.sh").chmod(0o755)
-    (task_dir / "evaluator" / "tests" / "test_hidden.py").write_text(EVALUATOR_TEST, encoding="utf-8")
+    (task_dir / "evaluator" / "tests" / "test_hidden.py").write_text(
+        EVALUATOR_TEST, encoding="utf-8"
+    )
 
     # Write environment
     (task_dir / "environment" / "Dockerfile").write_text(DOCKERFILE, encoding="utf-8")

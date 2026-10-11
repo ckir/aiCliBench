@@ -18,9 +18,9 @@ from ai_agents.adapter import paired_order
 from ai_benchmark import storage as storage_module
 from ai_benchmark.config import config_snapshot
 from ai_benchmark.evaluator import GateSpec, evaluator_digest, run_evaluation
-from ai_benchmark.provenance import build_manifest, environment_digest
+from ai_benchmark.provenance import build_manifest, environment_digest, inspect_image
 from ai_benchmark.redaction import redact_text
-from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
+from ai_benchmark.task_materialize import MaterializeMismatchError, materialize_repo
 from ai_benchmark.task_registry import LoadedTask, load_task, resolve_repository
 from ai_benchmark.workspace import checkout_fresh, workspace_diff
 from ai_core.errors import ConfigurationError
@@ -154,9 +154,13 @@ def run_experiment(
         except Exception:
             tool_versions[name] = None
 
-    from ai_benchmark.provenance import build_manifest, environment_digest
-
     conn = storage_module.connect(db_path)
+
+    should_docker = use_docker
+    if should_docker is None:
+        from ai_benchmark.docker_runner import docker_available
+
+        should_docker = docker_available()
 
     # Build provenance manifest
     agents_info = {name: adapter.capability.model_dump() for name, adapter in adapters.items()}
@@ -165,10 +169,17 @@ def run_experiment(
         task = loaded.definition
         task_dir = loaded.task_dir
         env_digest = environment_digest(task_dir, task.dockerfile)
+        image = inspect_image(f"codebench-task:{task.id}") if should_docker else None
         tasks_info[task.id] = {
-            "commit": task.commit[:12],
+            "commit": task.commit,
+            "instruction_sha256": loaded.instruction_sha256,
+            "evaluator_digest": (
+                evaluator_digest(task_dir / "evaluator")
+                if (task_dir / "evaluator").is_dir()
+                else ""
+            ),
             "environment_digest": env_digest,
-            "image_id": "n/a",  # Will be filled in after image build
+            "image_id": image.id if image else None,
         }
     manifest = build_manifest(
         prompt_wrapper_version=PROMPT_WRAPPER_VERSION,
@@ -177,6 +188,9 @@ def run_experiment(
         tasks=tasks_info,
     )
     provenance_json = json.dumps(manifest, sort_keys=True)
+    manifest_path = runs_dir / exp_id / "manifest.json"
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest, sort_keys=True, indent=2), encoding="utf-8")
 
     storage_module.insert_experiment(
         conn,
@@ -199,12 +213,6 @@ def run_experiment(
         },
     )
     conn.commit()
-
-    should_docker = use_docker
-    if should_docker is None:
-        from ai_benchmark.docker_runner import docker_available
-
-        should_docker = docker_available()
 
     total = 0
     completed = 0
@@ -383,7 +391,7 @@ def _run_once(
             "cli_version": None,
             "starting_commit": "",
             "instruction_sha256": loaded.instruction_sha256,
-            "environment_digest": "",
+            "environment_digest": environment_digest(loaded.task_dir, task.dockerfile),
             "evaluator_digest": "",
             "started_at": started_at,
             "ended_at": "",

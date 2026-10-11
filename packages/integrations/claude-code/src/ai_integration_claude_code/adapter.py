@@ -21,6 +21,15 @@ from ai_schemas.codebench import AgentCapability, UsageRecord
 
 
 def _help_text(command: str) -> str:
+    """Get the help text from a CLI command.
+
+    Args:
+        command: The command to query (e.g., "claude").
+
+    Returns:
+        Combined stdout and stderr from the command's --help output,
+        or empty string if the command fails.
+    """
     try:
         result = subprocess.run(  # noqa: S603 - fixed arg list, no shell
             [command, "--help"], capture_output=True, text=True, timeout=10
@@ -31,6 +40,14 @@ def _help_text(command: str) -> str:
 
 
 def _version_text(command: str) -> str | None:
+    """Get the version string from a CLI command.
+
+    Args:
+        command: The command to query (e.g., "claude").
+
+    Returns:
+        The first line of version output, or None if unavailable.
+    """
     try:
         result = subprocess.run(  # noqa: S603 - fixed arg list, no shell
             [command, "--version"], capture_output=True, text=True, timeout=10
@@ -44,7 +61,14 @@ def _version_text(command: str) -> str | None:
 
 
 def _parse_usage(payload: object) -> UsageRecord:
-    """Extract known usage fields only; unknown/missing → None (§12.3)."""
+    """Extract known usage fields only; unknown/missing → None (§12.3).
+
+    Args:
+        payload: The parsed JSON response from the CLI.
+
+    Returns:
+        A UsageRecord with extracted fields, or empty record on failure.
+    """
     if not isinstance(payload, dict):
         return UsageRecord()
     usage = payload.get("usage") if isinstance(payload.get("usage"), dict) else payload
@@ -74,7 +98,14 @@ def _parse_usage(payload: object) -> UsageRecord:
 
 
 def _parse_response(stdout: str) -> tuple[str, str | None, UsageRecord]:
-    """Defensively parse structured output; malformed events never crash."""
+    """Defensively parse structured output; malformed events never crash.
+
+    Args:
+        stdout: Raw stdout from the CLI process.
+
+    Returns:
+        Tuple of (response_text, reported_model, usage_record).
+    """
     text = stdout.strip()
     if not text:
         return "", None, UsageRecord()
@@ -103,18 +134,34 @@ def _parse_response(stdout: str) -> tuple[str, str | None, UsageRecord]:
 
 
 class ClaudeCodeAdapter:
-    """Subprocess adapter for the Claude Code CLI."""
+    """Subprocess adapter for the Claude Code CLI.
+
+    Implements the AgentAdapter protocol for the Anthropic Claude Code CLI.
+    Uses non-interactive/print mode with defensive structured-output parsing.
+    Verifies flags against `claude --help`; never assumes JSON fields exist.
+    """
 
     def __init__(self, config: ClaudeCodeConfig | None = None) -> None:
+        """Initialize the adapter.
+
+        Args:
+            config: Adapter configuration. Uses defaults if not provided.
+        """
         self._config = config or ClaudeCodeConfig()
         self._help_cache: str | None = None
 
     @property
     def agent_name(self) -> str:
+        """Return the agent identifier."""
         return "claude"
 
     @property
     def capability(self) -> AgentCapability:
+        """Return the adapter's capabilities by probing the CLI's --help.
+
+        Returns:
+            AgentCapability with feature flags based on supported CLI flags.
+        """
         help_text = self._help()
         return AgentCapability(
             agent_name="claude",
@@ -129,14 +176,25 @@ class ClaudeCodeAdapter:
         )
 
     def _help(self) -> str:
+        """Get and cache the CLI's help text."""
         if self._help_cache is None:
             self._help_cache = _help_text(self._config.command)
         return self._help_cache
 
     def version(self) -> str | None:
+        """Get the CLI version string.
+
+        Returns:
+            Version string from `claude --version`, or None if unavailable.
+        """
         return _version_text(self._config.command)
 
     def check(self) -> dict[str, object]:
+        """Non-destructive health probe (no paid/state-changing tasks).
+
+        Returns:
+            Dictionary with keys: agent, available, command, version, capability.
+        """
         command = self._config.command
         available = shutil.which(command) is not None
         return {
@@ -148,7 +206,14 @@ class ClaudeCodeAdapter:
         }
 
     def build_argv(self, prompt: str) -> list[str]:
-        """Build the CLI argument list (no shell). Verifies flags via --help."""
+        """Build the CLI argument list (no shell). Verifies flags via --help.
+
+        Args:
+            prompt: The prompt to send to the agent.
+
+        Returns:
+            List of command-line arguments.
+        """
         help_text = self._help()
         argv: list[str] = [self._config.command]
         if "--print" in help_text:
@@ -170,6 +235,19 @@ class ClaudeCodeAdapter:
         events_path: Path | None,
         timeout_seconds: float,
     ) -> RunResult:
+        """Execute the agent subprocess; enforce timeout; never use shell strings.
+
+        Args:
+            prompt: The prompt to send to the agent.
+            workdir: Working directory for the subprocess.
+            stdout_path: File path to capture stdout.
+            stderr_path: File path to capture stderr.
+            events_path: Optional file path for event stream (JSONL).
+            timeout_seconds: Maximum execution time in seconds.
+
+        Returns:
+            RunResult with execution outcome and captured output.
+        """
         from ai_benchmark.redaction import redact_text as _redact
 
         started_at = datetime.now(UTC).isoformat()

@@ -98,7 +98,9 @@ class AgentsConfig(BaseModel):
             if name in reserved:
                 raise ValueError(f"invalid custom agent name: {name!r} (reserved)")
             if not name.islower() or not name[0].isalpha():
-                raise ValueError(f"invalid custom agent name: {name!r} (must start with letter, lowercase)")
+                raise ValueError(
+                    f"invalid custom agent name: {name!r} (must start with letter, lowercase)"
+                )
             if not all(c.isalnum() or c in "-_" for c in name):
                 raise ValueError(f"invalid custom agent name: {name!r} (only alphanumeric, -, _)")
             if len(name) > 32:
@@ -141,7 +143,8 @@ class BenchmarkConfig(BaseModel):
         for name, inst in self.agents.custom.items():
             if inst.timeout_seconds > self.execution.global_max_timeout_seconds:
                 raise ValueError(
-                    f"agents.custom.{name}.timeout_seconds exceeds execution.global_max_timeout_seconds"
+                    f"agents.custom.{name}.timeout_seconds exceeds "
+                    "execution.global_max_timeout_seconds"
                 )
         return self
 

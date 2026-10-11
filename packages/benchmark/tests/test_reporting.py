@@ -58,7 +58,7 @@ def test_export_csv_columns_and_order():
 
 def test_html_escapes_injection():
     exp, runs, evals = _sample()
-    runs[0]["task_id"] = "<script>alert(\"x\")</script>"
+    runs[0]["task_id"] = '<script>alert("x")</script>'
     score = score_experiment(runs, evals)
     html = render_report(
         title="CodeBench <Test>",
@@ -125,3 +125,33 @@ def test_flatten_includes_coverage_fields():
     )
     assert row["cost_usd"] == 1.5
     assert row["eval_status"] == "pass"
+
+
+def test_report_renders_provenance_table():
+    exp, runs, evals = _sample()
+    exp["provenance_json"] = json.dumps(
+        {
+            "prompt_wrapper_version": "v1",
+            "docker_version": "27.0",
+            "tasks": {
+                "example-task": {
+                    "commit": "a" * 40,
+                    "evaluator_digest": "b" * 64,
+                    "environment_digest": "c" * 64,
+                    "image_id": None,
+                }
+            },
+        }
+    )
+    html = render_report(
+        title="t",
+        experiment=exp,
+        runs=runs,
+        evaluations=evals,
+        score=score_experiment(runs, evals),
+        tool_versions={},
+        warnings=[],
+    )
+    assert "Provenance" in html
+    assert "a" * 12 in html
+    assert "c" * 12 in html

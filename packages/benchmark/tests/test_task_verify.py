@@ -1,9 +1,6 @@
 """Tests for task_verify module."""
 
-import tempfile
 from pathlib import Path
-
-import pytest
 
 from ai_benchmark.task_materialize import materialize_repo
 from ai_benchmark.task_registry import load_task, resolve_repository
@@ -17,20 +14,27 @@ def _write_task_with_solution(tmp_path: Path, task_id: str = "test-task") -> Pat
     task_dir = tmp_path / "pilot" / task_id
     task_dir.mkdir(parents=True)
     (task_dir / "source").mkdir()
-    (task_dir / "source" / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
+    (task_dir / "source" / "calc.py").write_text(
+        "def add(a, b):\n    return a - b\n", encoding="utf-8"
+    )
     (task_dir / "source" / "README.md").write_text("# Task\n", encoding="utf-8")
     (task_dir / "solution").mkdir()
     (task_dir / "solution" / "files").mkdir()
-    (task_dir / "solution" / "files" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (task_dir / "solution" / "files" / "calc.py").write_text(
+        "def add(a, b):\n    return a + b\n", encoding="utf-8"
+    )
     (task_dir / "evaluator").mkdir()
     (task_dir / "evaluator" / "run_tests.sh").write_text(
         "#!/bin/bash\n"
-        'python3 -c "from calc import add; assert add(2,3)==5; assert add(-1,1)==0; assert add(0,0)==0"\n',
+        'python3 -c "from calc import add; '
+        'assert add(2,3)==5; assert add(-1,1)==0; assert add(0,0)==0"\n',
         encoding="utf-8",
     )
     (task_dir / "evaluator" / "run_tests.sh").chmod(0o755)
     (task_dir / "environment").mkdir()
-    (task_dir / "environment" / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+    (task_dir / "environment" / "Dockerfile").write_text(
+        "FROM python:3.12-slim\n", encoding="utf-8"
+    )
     (task_dir / "task.toml").write_text(
         f"""schema_version = 1
 id = "{task_id}"
@@ -79,19 +83,24 @@ def test_verify_detects_original_passing(tmp_path: Path):
     task_dir = tmp_path / "pilot" / "t2"
     task_dir.mkdir(parents=True)
     (task_dir / "source").mkdir()
-    (task_dir / "source" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (task_dir / "source" / "calc.py").write_text(
+        "def add(a, b):\n    return a + b\n", encoding="utf-8"
+    )
     (task_dir / "solution").mkdir()
     (task_dir / "solution" / "files").mkdir()
-    (task_dir / "solution" / "files" / "calc.py").write_text("def add(a, b):\n    return a + b\n", encoding="utf-8")
+    (task_dir / "solution" / "files" / "calc.py").write_text(
+        "def add(a, b):\n    return a + b\n", encoding="utf-8"
+    )
     (task_dir / "evaluator").mkdir()
     (task_dir / "evaluator" / "run_tests.sh").write_text(
-        "#!/bin/bash\n"
-        'python3 -c "from calc import add; assert add(2,3)==5"\n',
+        '#!/bin/bash\npython3 -c "from calc import add; assert add(2,3)==5"\n',
         encoding="utf-8",
     )
     (task_dir / "evaluator" / "run_tests.sh").chmod(0o755)
     (task_dir / "environment").mkdir()
-    (task_dir / "environment" / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+    (task_dir / "environment" / "Dockerfile").write_text(
+        "FROM python:3.12-slim\n", encoding="utf-8"
+    )
     (task_dir / "task.toml").write_text(
         """schema_version = 1
 id = "t2"
@@ -121,7 +130,9 @@ def test_verify_detects_solution_failing(tmp_path: Path):
     """Test that verify_task detects when solution doesn't fix the bug."""
     task_dir = _write_task_with_solution(tmp_path, "t3")
     # Make solution also buggy
-    (task_dir / "solution" / "files" / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
+    (task_dir / "solution" / "files" / "calc.py").write_text(
+        "def add(a, b):\n    return a - b\n", encoding="utf-8"
+    )
     _update_commit(task_dir)
 
     result = verify_task(task_dir, work_dir=tmp_path / "work", use_docker=False)
@@ -134,6 +145,7 @@ def test_verify_missing_overlay_is_error(tmp_path: Path):
     task_dir = _write_task_with_solution(tmp_path, "t4")
     # Remove solution overlay
     import shutil
+
     shutil.rmtree(task_dir / "solution")
     _update_commit(task_dir)
 
@@ -158,23 +170,20 @@ def test_apply_solution_rejects_traversal(tmp_path: Path):
     )
 
     # Manually create a file with traversal in solution overlay
-    solution_dir = task_dir / "solution" / "files"
     # Create a file that would have traversal if it existed
     # We simulate this by directly calling the check logic
     from ai_benchmark.task_verify import apply_solution
-    import pytest
-    
+
     # The traversal check is on relative path parts
     # We can't easily create a file with '..' in its path on the filesystem,
     # but we can verify the check logic works by testing the relative path parsing
-    solution_dir = task_dir / "solution" / "files"
     test_rel = Path("subdir") / ".." / ".." / "evil.txt"
     assert any(part == ".." for part in test_rel.parts)
-    
+
     # Normal files should not trigger the check
     normal_rel = Path("calc.py")
     assert not any(part == ".." for part in normal_rel.parts)
-    
+
     # Verify apply_solution works normally
     copied = apply_solution(task_dir, workspace)
     assert len(copied) == 1

@@ -1,7 +1,6 @@
 """Tests for task_materialize module."""
 
 import shutil
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -19,14 +18,20 @@ def _write_source_task(tmp_path: Path, task_id: str, pinned: str = "0" * 40) -> 
     task_dir = tmp_path / "pilot" / task_id
     task_dir.mkdir(parents=True)
     (task_dir / "source").mkdir()
-    (task_dir / "source" / "calc.py").write_text("def add(a, b):\n    return a - b\n", encoding="utf-8")
+    (task_dir / "source" / "calc.py").write_text(
+        "def add(a, b):\n    return a - b\n", encoding="utf-8"
+    )
     (task_dir / "source" / "README.md").write_text("# Task\n", encoding="utf-8")
-    (task_dir / "source" / "test_visible.py").write_text("def test():\n    pass\n", encoding="utf-8")
+    (task_dir / "source" / "test_visible.py").write_text(
+        "def test():\n    pass\n", encoding="utf-8"
+    )
     (task_dir / "evaluator").mkdir()
     (task_dir / "evaluator" / "run_tests.sh").write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     (task_dir / "evaluator" / "run_tests.sh").chmod(0o755)
     (task_dir / "environment").mkdir()
-    (task_dir / "environment" / "Dockerfile").write_text("FROM python:3.12-slim\n", encoding="utf-8")
+    (task_dir / "environment" / "Dockerfile").write_text(
+        "FROM python:3.12-slim\n", encoding="utf-8"
+    )
     (task_dir / "task.toml").write_text(
         f"""schema_version = 1
 id = "{task_id}"
@@ -55,6 +60,7 @@ def test_materialize_generates_and_repins(tmp_path: Path):
     assert first.commit is not None
     assert len(first.commit) == 40
 
+    assert first.commit is not None
     repin_task(task, first.commit)
     assert materialize_repo(task).action == "kept"
 
@@ -76,6 +82,7 @@ def test_materialize_dirty_repo_rejected(tmp_path: Path):
     task = _write_source_task(tmp_path, "t3")
     # First generate and repin
     first = materialize_repo(task, check=False)
+    assert first.commit is not None
     repin_task(task, first.commit)
     assert materialize_repo(task).action == "kept"
 
@@ -106,13 +113,14 @@ def test_repin_rewrites_only_commit_line(tmp_path: Path):
     task = _write_source_task(tmp_path, "t5")
     original = (task / "task.toml").read_bytes()
     first = materialize_repo(task, check=False)
+    assert first.commit is not None
     repin_task(task, first.commit)
     new_content = (task / "task.toml").read_bytes()
     # Only the commit line should change
     orig_lines = original.splitlines()
     new_lines = new_content.splitlines()
     assert len(orig_lines) == len(new_lines)
-    diffs = [(o, n) for o, n in zip(orig_lines, new_lines) if o != n]
+    diffs = [(o, n) for o, n in zip(orig_lines, new_lines, strict=True) if o != n]
     assert len(diffs) == 1
     assert b'commit = "' in diffs[0][0]
     assert b'commit = "' in diffs[0][1]

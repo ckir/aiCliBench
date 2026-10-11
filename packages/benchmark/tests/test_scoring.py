@@ -109,8 +109,20 @@ def test_quality_gate_counts():
         _run("r2", "claude", "completed"),
     ]
     evals = [
-        {"run_id": "r1", "status": "pass", "acceptance_pass": 1, "build_pass": 1, "lint_pass": None},
-        {"run_id": "r2", "status": "pass", "acceptance_pass": 1, "build_pass": 0, "lint_pass": None},
+        {
+            "run_id": "r1",
+            "status": "pass",
+            "acceptance_pass": 1,
+            "build_pass": 1,
+            "lint_pass": None,
+        },
+        {
+            "run_id": "r2",
+            "status": "pass",
+            "acceptance_pass": 1,
+            "build_pass": 0,
+            "lint_pass": None,
+        },
     ]
     report = score_experiment(runs, evals)
     gates = report.quality_gates["claude"]
@@ -123,7 +135,9 @@ def test_quality_gate_counts():
 
 
 def test_wilson_known_value():
-    low, high = wilson_interval(3, 4)
+    interval = wilson_interval(3, 4)
+    assert interval is not None
+    low, high = interval
     assert low == pytest.approx(0.3006, abs=1e-3)
     assert high == pytest.approx(0.9545, abs=1e-3)
     assert wilson_interval(0, 0) is None
@@ -138,6 +152,7 @@ def test_sign_test_values():
 def test_bootstrap_deterministic_and_bounded():
     outs = [(True, False)] * 6 + [(True, True)] * 2 + [(False, True)] * 2
     ci = paired_bootstrap_delta_ci(outs)
+    assert ci is not None
     assert ci == paired_bootstrap_delta_ci(outs)
     assert -1.0 <= ci[0] <= 0.4 <= ci[1] <= 1.0
     assert paired_bootstrap_delta_ci([(True, False)] * 5) == (1.0, 1.0)

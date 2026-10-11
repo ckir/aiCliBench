@@ -13,15 +13,15 @@ from ai_benchmark.task_scaffold import scaffold_task
 from ai_benchmark.task_verify import TaskVerification, apply_solution, verify_task
 
 __all__: list[str] = [
-    "TaskVerification",
-    "apply_solution",
-    "verify_task",
     "ImageCache",
     "ImageInfo",
+    "TaskVerification",
+    "apply_solution",
     "build_manifest",
     "connect_with_migrations",
     "environment_digest",
     "inspect_image",
-    "update_experiment_provenance",
     "scaffold_task",
+    "update_experiment_provenance",
+    "verify_task",
 ]

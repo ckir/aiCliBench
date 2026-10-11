@@ -14,6 +14,7 @@ build/
 .idea/
 .vscode/
 runs/
+.codebench/
 tasks/pilot/example-task/repo/
 tasks/**/repo/
 .superpowers/

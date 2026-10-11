@@ -1,5 +1,5 @@
-from pathlib import Path
 import json
+from pathlib import Path
 
 from ai_benchmark.doctor import run_doctor
 from ai_benchmark.fake_agent import FakeAgentAdapter
@@ -94,7 +94,7 @@ def test_scheduler_records_gate_results(tmp_path: Path):
         "claude": FakeAgentAdapter(agent_name="claude", mode="pass"),
         "antigravity": FakeAgentAdapter(agent_name="antigravity", mode="fail"),
     }
-    summary = run_experiment(
+    run_experiment(
         config=config,
         tasks_root=tasks_root,
         request=ExperimentRequest(
@@ -112,9 +112,24 @@ def test_scheduler_records_gate_results(tmp_path: Path):
     conn = connect(tmp_path / "codebench.sqlite3")
     runs = runs_for_experiment(conn, "exp_gates")
     evals = {r["agent_name"]: evaluation_for_run(conn, r["id"]) for r in runs}
-    assert evals["claude"]["build_pass"] == 1
-    assert evals["claude"]["acceptance_pass"] == 1
-    assert evals["antigravity"]["build_pass"] == 1
-    assert evals["antigravity"]["acceptance_pass"] == 0
-    assert evals["claude"]["lint_pass"] is None
-    assert "gates" in json.loads(evals["claude"]["output_json"])
+    claude, antigravity = evals["claude"], evals["antigravity"]
+    assert claude is not None
+    assert antigravity is not None
+    assert claude["build_pass"] == 1
+    assert claude["acceptance_pass"] == 1
+    assert antigravity["build_pass"] == 1
+    assert antigravity["acceptance_pass"] == 0
+    assert claude["lint_pass"] is None
+    assert "gates" in json.loads(claude["output_json"])
+    # provenance: manifest file, stored column, per-run environment digest
+    manifest = json.loads((tmp_path / "runs" / "exp_gates" / "manifest.json").read_text())
+    entry = manifest["tasks"]["example-task"]
+    assert len(entry["commit"]) == 40
+    assert entry["instruction_sha256"]
+    assert entry["evaluator_digest"]
+    assert entry["environment_digest"]
+    stored = conn.execute(
+        "SELECT provenance_json FROM experiments WHERE id = ?", ("exp_gates",)
+    ).fetchone()
+    assert json.loads(stored[0])["tasks"]["example-task"] == entry
+    assert all(r["environment_digest"] == entry["environment_digest"] for r in runs)

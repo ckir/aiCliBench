@@ -29,6 +29,19 @@ code { background: #f6f6f6; padding: 0 0.2rem; }
 <code>{{ experiment.status }}</code> · seed
 <code>{{ experiment.random_seed }}</code></p>
 <pre>{{ resolved_config }}</pre>
+{% if provenance_tasks %}
+<h3>Provenance</h3>
+<p>Prompt wrapper <code>{{ provenance_wrapper }}</code> · docker
+<code>{{ provenance_docker }}</code></p>
+<table><tr><th>Task</th><th>Commit</th><th>Evaluator</th><th>Environment</th><th>Image</th></tr>
+{% for tid, t in provenance_tasks.items() %}
+<tr><td>{{ tid }}</td><td>{{ (t.commit or '')[:12] }}</td>
+<td>{{ (t.evaluator_digest or '')[:12] }}</td>
+<td>{{ (t.environment_digest or '')[:12] }}</td>
+<td>{{ (t.image_id or 'n/a')[:19] }}</td></tr>
+{% endfor %}
+</table>
+{% endif %}
 
 <h2>2. Agent versions and model identity confidence</h2>
 <table><tr><th>Agent</th><th>Version</th></tr>
@@ -54,10 +67,12 @@ model comparison.</div>
 <p>A wins {{ paired.a_wins }}, B wins {{ paired.b_wins }},
 both pass {{ paired.both_pass }}, neither {{ paired.neither_pass }},
 invalid {{ paired.invalid }} (total {{ paired.total_pairs }}).
-{% if paired.decisive_pairs > 0 and paired.sign_test_p_value is not none and paired.delta_ci95 is not none %}
-Decisive pairs: {{ paired.decisive_pairs }}, sign test p={{ "%.3f"|format(paired.sign_test_p_value) }},
-delta(A-B) 95% CI [{{ "%.2f"|format(paired.delta_ci95[0]) }}, {{ "%.2f"|format(paired.delta_ci95[1]) }}].
-{% else %}Fewer than 10 decisive pairs.{% endif %}</p>
+{% set p = paired.sign_test_p_value %}{% set ci = paired.delta_ci95 %}
+{% if paired.decisive_pairs > 0 and p is not none and ci is not none %}
+Decisive pairs: {{ paired.decisive_pairs }}, sign test p={{ "%.3f"|format(p) }},
+delta(A-B) 95% CI [{{ "%.2f"|format(ci[0]) }}, {{ "%.2f"|format(ci[1]) }}].
+{% if paired.decisive_pairs < 10 %}Caution: fewer than 10 decisive pairs.{% endif %}
+{% else %}No decisive pairs.{% endif %}</p>
 
 <h2>5. Per-category pass rates</h2>
 <table><tr><th>Agent</th><th>Passes</th><th>Eligible</th></tr>
@@ -106,9 +121,12 @@ delta(A-B) 95% CI [{{ "%.2f"|format(paired.delta_ci95[0]) }}, {{ "%.2f"|format(p
 <tr>
   <td>{{ agent }}</td>
   <td>{{ row.acceptance_pass }}/{{ row.eligible }}</td>
-  <td>{% if row.build_total %}{{ row.build_pass }}/{{ row.build_total }}{% else %}n/a{% endif %}</td>
-  <td>{% if row.lint_total %}{{ row.lint_pass }}/{{ row.lint_total }}{% else %}n/a{% endif %}</td>
-  <td>{% if row.typecheck_total %}{{ row.typecheck_pass }}/{{ row.typecheck_total }}{% else %}n/a{% endif %}</td>
+  <td>{% if row.build_total %}{{ row.build_pass }}/{{ row.build_total }}
+  {% else %}n/a{% endif %}</td>
+  <td>{% if row.lint_total %}{{ row.lint_pass }}/{{ row.lint_total }}
+  {% else %}n/a{% endif %}</td>
+  <td>{% if row.typecheck_total %}{{ row.typecheck_pass }}/{{ row.typecheck_total }}
+  {% else %}n/a{% endif %}</td>
 </tr>
 {% endfor %}
 </table>
@@ -265,7 +283,16 @@ def render_report(
 
     import json as _json
 
+    raw_prov = experiment.get("provenance_json") or "{}"
+    try:
+        provenance = _json.loads(raw_prov) if isinstance(raw_prov, str) else dict(raw_prov)
+    except (ValueError, TypeError):
+        provenance = {}
+
     return template.render(
+        provenance_tasks=provenance.get("tasks") or {},
+        provenance_wrapper=provenance.get("prompt_wrapper_version", ""),
+        provenance_docker=provenance.get("docker_version") or "n/a",
         title=title,
         experiment=experiment,
         resolved_config=_json.dumps(experiment.get("resolved_config_json", {}), indent=2)[:8000],

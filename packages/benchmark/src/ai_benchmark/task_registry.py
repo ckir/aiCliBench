@@ -10,7 +10,7 @@ from pathlib import Path
 
 from ai_agents.adapter import sha256_text, wrap_prompt
 from ai_benchmark.paths import safe_join
-from ai_benchmark.task_materialize import materialize_repo, MaterializeMismatchError
+from ai_benchmark.task_materialize import MaterializeMismatchError, materialize_repo
 from ai_core.errors import ConfigurationError, ValidationError
 from ai_schemas import TaskDefinition
 from ai_schemas.codebench import PROMPT_WRAPPER_VERSION
@@ -41,9 +41,15 @@ def _read_toml(path: Path) -> dict[str, object]:
 def load_task(task_dir: Path) -> LoadedTask:
     """Load and validate one task directory.
 
+    Args:
+        task_dir: Path to the task directory containing task.toml and source/.
+
+    Returns:
+        A LoadedTask containing the validated definition and derived metadata.
+
     Raises:
-        ConfigurationError: unreadable/metadata invalid.
-        ValidationError: path traversal or unsafe content.
+        ConfigurationError: If the task directory is unreadable or metadata is invalid.
+        ValidationError: If path traversal or unsafe content is detected.
     """
     task_toml = task_dir / "task.toml"
     if not task_toml.is_file():
@@ -81,7 +87,19 @@ def load_task(task_dir: Path) -> LoadedTask:
 
 
 def discover_tasks(tasks_root: Path, suite: str | None = None) -> list[LoadedTask]:
-    """Discover tasks under ``tasks_root/<suite>/<task-id>/``."""
+    """Discover tasks under ``tasks_root/<suite>/<task-id>/``.
+
+    Args:
+        tasks_root: Root directory containing suite subdirectories.
+        suite: Optional suite name to filter by. If None, all suites are scanned.
+
+    Returns:
+        List of loaded tasks sorted by task ID within each suite.
+
+    Raises:
+        ConfigurationError: If the tasks root or a suite directory is not found,
+            or if a task's suite metadata doesn't match its directory name.
+    """
     if not tasks_root.is_dir():
         raise ConfigurationError(f"tasks root not found: {tasks_root}")
     suites = [suite] if suite else sorted(p.name for p in tasks_root.iterdir() if p.is_dir())
@@ -114,6 +132,13 @@ def resolve_repository(task_dir: Path, repository: str) -> str:
 
     Task-relative paths (e.g. ``"repo"``) resolve inside *task_dir*;
     URLs and absolute paths pass through unchanged.
+
+    Args:
+        task_dir: The task directory containing the task.toml.
+        repository: The repository string from task.toml (relative path, URL, or absolute path).
+
+    Returns:
+        A resolved repository path or URL suitable for git clone.
     """
     if repository.startswith(("file://", "http://", "https://", "git@", "ssh://")):
         return repository
@@ -124,7 +149,19 @@ def resolve_repository(task_dir: Path, repository: str) -> str:
 
 
 def resolve_evaluator_command(command: list[str], evaluator_dir: Path) -> list[str]:
-    """Map container-style `/evaluator/...` paths to the host evaluator dir (local mode)."""
+    """Map container-style `/evaluator/...` paths to the host evaluator dir (local mode).
+
+    In Docker mode, evaluator files are mounted at `/evaluator/`. In local mode,
+    they reside in a host directory. This function rewrites the command to use
+    the correct local paths.
+
+    Args:
+        command: The evaluator command as a list of arguments.
+        evaluator_dir: The resolved path to the evaluator directory on the host.
+
+    Returns:
+        The command with `/evaluator/...` paths resolved to host paths.
+    """
     resolved: list[str] = []
     evaluator_dir = evaluator_dir.resolve()
     for part in command:
@@ -147,6 +184,14 @@ def validate_task(
     Checks: metadata, paths safe, commit exists (via git ls-remote when
     repository is local or reachable), Dockerfile present, evaluator command
     present, timeout/resource settings sane.
+
+    Args:
+        task_dir: Path to the task directory.
+        check_repo: Whether to verify the git commit exists in the repository.
+        check_docker: Whether to verify the Dockerfile exists.
+
+    Returns:
+        TaskValidation with ok flag, errors, and warnings.
     """
     errors: list[str] = []
     warnings: list[str] = []

@@ -6,8 +6,9 @@ import json
 import math
 import random
 import statistics
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Sequence
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,7 +97,7 @@ def sign_test_p_value(a_wins: int, b_wins: int) -> float | None:
     total = 0.0
     for i in range(k + 1):
         total += math.comb(n, i)
-    p = 2 * total / (2 ** n)
+    p = 2 * total / (2**n)
     return min(1.0, p)
 
 
@@ -120,7 +121,7 @@ def paired_bootstrap_delta_ci(
     """Paired bootstrap confidence interval for difference in pass rates (A - B)."""
     if not outcomes:
         return None
-    rng = random.Random(seed)
+    rng = random.Random(seed)  # noqa: S311 - deterministic resampling, not cryptography
     n = len(outcomes)
     deltas: list[float] = []
     for _ in range(resamples):

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from ai_benchmark.evaluator import evaluator_digest, run_evaluation, GateSpec
+from ai_benchmark.evaluator import GateSpec, evaluator_digest, run_evaluation
 from ai_core.status import EvalStatus
 from ai_schemas import TaskScoring
 
@@ -103,8 +103,11 @@ def test_gate_required_fail_makes_evaluation_fail(tmp_path: Path):
         use_docker=False,
         gates=gates,
     )
-    assert r.status == EvalStatus.FAIL and r.acceptance_pass is False
-    assert r.lint_pass is False and r.build_pass is None and "lint" in r.gate_outputs
+    assert r.status == EvalStatus.FAIL
+    assert r.acceptance_pass is False
+    assert r.lint_pass is False
+    assert r.build_pass is None
+    assert "lint" in r.gate_outputs
 
 
 def test_gate_optional_fail_recorded_only(tmp_path: Path):
@@ -147,7 +150,7 @@ def test_gate_pass_does_not_rescue_failed_acceptance(tmp_path: Path):
 def test_gate_timeout_is_evaluation_error(tmp_path: Path):
     snap = _make_snapshot(tmp_path / "s4", "x\n")
     ev = _make_evaluator(tmp_path / "e4", passes=True)
-    gates = GateSpec(build=tuple(["python3", "-c", "import time; time.sleep(5)"]), build_required=True)
+    gates = GateSpec(build=("python3", "-c", "import time; time.sleep(5)"), build_required=True)
     r = run_evaluation(
         snapshot_dir=snap,
         evaluator_dir=ev,

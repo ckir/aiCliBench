@@ -12,6 +12,7 @@ dependencies = [
   "ai-benchmark",
   "ai-integration-claude-code",
   "ai-integration-antigravity",
+  "ai-integration-generic-cli",
   "pydantic>=2",
   "typer>=0.9",
 ]
@@ -32,6 +33,7 @@ ai-agents = { workspace = true }
 ai-benchmark = { workspace = true }
 ai-integration-claude-code = { workspace = true }
 ai-integration-antigravity = { workspace = true }
+ai-integration-generic-cli = { workspace = true }
 
 [project.scripts]
 ai = "ai_cli:main"

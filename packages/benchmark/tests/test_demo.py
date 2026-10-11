@@ -8,7 +8,7 @@ from ai_benchmark.task_materialize import materialize_repo
 from ai_benchmark.task_registry import load_task, resolve_repository, validate_task
 from ai_benchmark.task_verify import apply_solution
 from ai_benchmark.workspace import checkout_fresh
-from ai_core.status import EvalStatus, RunStatus
+from ai_core.status import EvalStatus
 
 DEMO_DIR = Path(__file__).resolve().parents[3] / "tasks" / "pilot" / "example-task"
 

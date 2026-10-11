@@ -2,7 +2,6 @@
 
 import csv
 from io import StringIO
-from typing import cast
 
 
 def sniff_delimiter(sample: str, candidates: tuple[str, ...] = (",", "\t", ";", "|")) -> str:
@@ -17,7 +16,7 @@ def sniff_delimiter(sample: str, candidates: tuple[str, ...] = (",", "\t", ";", 
         except csv.Error:
             continue
     # Fallback: try first line only (header)
-    first_line = sample.split('\n')[0] if sample else ""
+    first_line = sample.split("\n")[0] if sample else ""
     if first_line:
         for delim in candidates:
             try:
@@ -41,11 +40,11 @@ def parse_tabular_data(text: str, delimiter: str | None = None) -> list[dict[str
     """Parse CSV text into a list of dictionaries."""
     if not text.strip():
         return []
-    
+
     # Sniff delimiter if not provided
     if delimiter is None:
         delimiter = sniff_delimiter(text)
-    
+
     # Parse CSV
     reader = csv.DictReader(StringIO(text), delimiter=delimiter)
     rows = []

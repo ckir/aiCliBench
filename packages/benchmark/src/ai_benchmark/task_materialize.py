@@ -5,13 +5,11 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 from ai_core.errors import ConfigurationError
-
 
 # Fixed git environment for deterministic commits
 FIXED_GIT_ENV: dict[str, str] = {
@@ -47,7 +45,10 @@ def generated_commit_message(task_id: str) -> str:
 
 
 def _is_task_relative_repo(repository: str) -> bool:
-    return not repository.startswith(("file://", "http://", "https://", "git@", "ssh://")) and not Path(repository).is_absolute()
+    return (
+        not repository.startswith(("file://", "http://", "https://", "git@", "ssh://"))
+        and not Path(repository).is_absolute()
+    )
 
 
 def _copy_source_to_temp(source_dir: Path, temp_dir: Path) -> None:
@@ -71,24 +72,49 @@ def _git_init_commit(repo_dir: Path, task_id: str) -> str:
     subprocess.run(["git", "init"], cwd=repo_dir, check=True, capture_output=True, env=env)  # noqa: S607
     subprocess.run(["git", "add", "-A"], cwd=repo_dir, check=True, capture_output=True, env=env)  # noqa: S607
     msg = generated_commit_message(task_id)
-    subprocess.run(["git", "commit", "-q", "-m", msg], cwd=repo_dir, check=True, capture_output=True, env=env)  # noqa: S607
-    result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, check=True, capture_output=True, text=True, env=env)  # noqa: S607
+    subprocess.run(  # noqa: S603 - fixed arg list, no shell
+        ["git", "commit", "-q", "-m", msg],  # noqa: S607
+        cwd=repo_dir,
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],  # noqa: S607
+        cwd=repo_dir,
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
     return result.stdout.strip().lower()
 
 
 def _repo_is_clean(repo_dir: Path) -> bool:
-    result = subprocess.run(["git", "status", "--porcelain"], cwd=repo_dir, capture_output=True, text=True)  # noqa: S607
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],  # noqa: S607
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+    )
     return result.returncode == 0 and result.stdout.strip() == ""
 
 
 def _get_head_commit(repo_dir: Path) -> str:
-    result = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo_dir, capture_output=True, text=True)  # noqa: S607
+    result = subprocess.run(
+        ["git", "rev-parse", "HEAD"],  # noqa: S607
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+    )
     if result.returncode != 0:
         return ""
     return result.stdout.strip().lower()
 
 
-def materialize_repo(task_dir: Path, *, force: bool = False, check: bool = True) -> MaterializeResult:
+def materialize_repo(
+    task_dir: Path, *, force: bool = False, check: bool = True
+) -> MaterializeResult:
     """Materialize the task repository from source/.
 
     Args:

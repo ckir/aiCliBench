@@ -11,6 +11,7 @@ members = [
     "ai-evals",
     "ai-integration-antigravity",
     "ai-integration-claude-code",
+    "ai-integration-generic-cli",
     "ai-integration-openai",
     "ai-mcp-client",
     "ai-mcp-core",
@@ -75,6 +76,7 @@ dependencies = [
     { name = "ai-core" },
     { name = "ai-integration-antigravity" },
     { name = "ai-integration-claude-code" },
+    { name = "ai-integration-generic-cli" },
     { name = "ai-plugin-example" },
     { name = "ai-plugins-sdk" },
     { name = "ai-schemas" },
@@ -89,6 +91,7 @@ requires-dist = [
     { name = "ai-core", editable = "packages/core" },
     { name = "ai-integration-antigravity", editable = "packages/integrations/antigravity" },
     { name = "ai-integration-claude-code", editable = "packages/integrations/claude-code" },
+    { name = "ai-integration-generic-cli", editable = "packages/integrations/generic-cli" },
     { name = "ai-plugin-example", editable = "packages/plugins/example" },
     { name = "ai-plugins-sdk", editable = "packages/plugins-sdk" },
     { name = "ai-schemas", editable = "packages/schemas" },
@@ -157,6 +160,27 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ai-agents", editable = "packages/agents" },
+    { name = "ai-core", editable = "packages/core" },
+    { name = "ai-schemas", editable = "packages/schemas" },
+    { name = "pydantic", specifier = ">=2" },
+]
+
+[[package]]
+name = "ai-integration-generic-cli"
+version = "0.1.0"
+source = { editable = "packages/integrations/generic-cli" }
+dependencies = [
+    { name = "ai-agents" },
+    { name = "ai-benchmark" },
+    { name = "ai-core" },
+    { name = "ai-schemas" },
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ai-agents", editable = "packages/agents" },
+    { name = "ai-benchmark", editable = "packages/benchmark" },
     { name = "ai-core", editable = "packages/core" },
     { name = "ai-schemas", editable = "packages/schemas" },
     { name = "pydantic", specifier = ">=2" },
@@ -263,6 +287,7 @@ dependencies = [
     { name = "ai-evals" },
     { name = "ai-integration-antigravity" },
     { name = "ai-integration-claude-code" },
+    { name = "ai-integration-generic-cli" },
     { name = "ai-integration-openai" },
     { name = "ai-mcp-client" },
     { name = "ai-mcp-core" },
@@ -295,6 +320,7 @@ requires-dist = [
     { name = "ai-evals", editable = "packages/evals" },
     { name = "ai-integration-antigravity", editable = "packages/integrations/antigravity" },
     { name = "ai-integration-claude-code", editable = "packages/integrations/claude-code" },
+    { name = "ai-integration-generic-cli", editable = "packages/integrations/generic-cli" },
     { name = "ai-integration-openai", editable = "packages/integrations/openai" },
     { name = "ai-mcp-client", editable = "packages/mcp-client" },
     { name = "ai-mcp-core", editable = "packages/mcp-core" },

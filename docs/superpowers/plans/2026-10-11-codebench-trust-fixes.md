@@ -75,26 +75,55 @@ def test_task_scoring_gate_defaults_and_required_needs_command():
 
 ```python
 def test_gate_required_fail_makes_evaluation_fail(tmp_path):
-    snap = _make_snapshot(tmp_path / "s", "x\n"); ev = _make_evaluator(tmp_path / "e", passes=True)
+    snap = _make_snapshot(tmp_path / "s", "x\n")
+    ev = _make_evaluator(tmp_path / "e", passes=True)
     gates = GateSpec(lint=tuple(_gate_script(tmp_path, "lint", 1)), lint_required=True)
-    r = run_evaluation(snapshot_dir=snap, evaluator_dir=ev, evaluator_command=["bash", str(ev / "run_tests.sh")], output_dir=tmp_path / "o", timeout_seconds=30, use_docker=False, gates=gates)
+    r = run_evaluation(
+        snapshot_dir=snap,
+        evaluator_dir=ev,
+        evaluator_command=["bash", str(ev / "run_tests.sh")],
+        output_dir=tmp_path / "o",
+        timeout_seconds=30,
+        use_docker=False,
+        gates=gates,
+    )
     assert r.status == EvalStatus.FAIL and r.acceptance_pass is False
     assert r.lint_pass is False and r.build_pass is None and "lint" in r.gate_outputs
 
-def test_gate_optional_fail_recorded_only(tmp_path): ...  # lint not required, exit 1 → status PASS, acceptance_pass True, lint_pass False
 
-def test_gate_pass_does_not_rescue_failed_acceptance(tmp_path): ...  # evaluator passes=False, build gate exit 0 required → FAIL, build_pass True
+def test_gate_optional_fail_recorded_only(
+    tmp_path,
+): ...  # lint not required, exit 1 → status PASS, acceptance_pass True, lint_pass False
 
-def test_gate_timeout_is_evaluation_error(tmp_path): ...  # gate = ["python3", "-c", "import time; time.sleep(5)"], timeout_seconds=0.3 → EVALUATION_ERROR, acceptance_pass None
+
+def test_gate_pass_does_not_rescue_failed_acceptance(
+    tmp_path,
+): ...  # evaluator passes=False, build gate exit 0 required → FAIL, build_pass True
+
+
+def test_gate_timeout_is_evaluation_error(
+    tmp_path,
+): ...  # gate = ["python3", "-c", "import time; time.sleep(5)"], timeout_seconds=0.3 → EVALUATION_ERROR, acceptance_pass None
+
 
 def test_gate_spec_from_scoring_resolves_commands():
-    spec = GateSpec.from_scoring(TaskScoring(build_required=True, build_command=["bash", "/evaluator/b.sh"]), resolve=lambda c: ["R", *c])
-    assert spec.build == ("R", "bash", "/evaluator/b.sh") and spec.configured() == {"build": spec.build}
+    spec = GateSpec.from_scoring(
+        TaskScoring(build_required=True, build_command=["bash", "/evaluator/b.sh"]),
+        resolve=lambda c: ["R", *c],
+    )
+    assert spec.build == ("R", "bash", "/evaluator/b.sh") and spec.configured() == {
+        "build": spec.build
+    }
+
 
 def test_evaluator_digest_ignores_pycache(tmp_path):
-    ev = _make_evaluator(tmp_path / "d", passes=True); before = evaluator_digest(ev)
-    (ev / "__pycache__").mkdir(); (ev / "__pycache__" / "x.cpython-313.pyc").write_bytes(b"\x00")
-    (ev / "run_tests.pyc").write_bytes(b"\x00"); (ev / ".pytest_cache").mkdir(); (ev / ".pytest_cache" / "v").write_text("1")
+    ev = _make_evaluator(tmp_path / "d", passes=True)
+    before = evaluator_digest(ev)
+    (ev / "__pycache__").mkdir()
+    (ev / "__pycache__" / "x.cpython-313.pyc").write_bytes(b"\x00")
+    (ev / "run_tests.pyc").write_bytes(b"\x00")
+    (ev / ".pytest_cache").mkdir()
+    (ev / ".pytest_cache" / "v").write_text("1")
     assert evaluator_digest(ev) == before
 ```
 
@@ -120,7 +149,11 @@ def test_evaluator_digest_ignores_pycache(tmp_path):
 ```python
 def test_scheduler_records_gate_results(tmp_path):
     # reuse test_scheduler_full_experiment_with_fakes setup (fake pass + fake fail), experiment_id="exp_gates"
-    conn = connect(db); evals = {r["agent_name"]: evaluation_for_run(conn, r["id"]) for r in runs_for_experiment(conn, "exp_gates")}
+    conn = connect(db)
+    evals = {
+        r["agent_name"]: evaluation_for_run(conn, r["id"])
+        for r in runs_for_experiment(conn, "exp_gates")
+    }
     assert evals["claude"]["build_pass"] == 1 and evals["claude"]["acceptance_pass"] == 1
     assert evals["antigravity"]["build_pass"] == 1 and evals["antigravity"]["acceptance_pass"] == 0
     assert evals["claude"]["lint_pass"] is None
@@ -321,7 +354,13 @@ Reporting: assert `"95% CI"` in §3 and `"sign test"` in §4; when decisive pair
 
 ```python
 PILOT = Path(__file__).resolve().parents[3] / "tasks" / "pilot"
-@pytest.mark.parametrize("task_dir", sorted(p for p in PILOT.iterdir() if (p / "task.toml").is_file()), ids=lambda p: p.name)
+
+
+@pytest.mark.parametrize(
+    "task_dir",
+    sorted(p for p in PILOT.iterdir() if (p / "task.toml").is_file()),
+    ids=lambda p: p.name,
+)
 def test_pilot_task_is_working_oracle(task_dir, tmp_path):
     result = verify_task(task_dir, work_dir=tmp_path, use_docker=False)
     assert result.ok, result.errors
