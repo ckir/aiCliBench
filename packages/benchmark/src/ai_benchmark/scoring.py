@@ -249,9 +249,34 @@ def score_experiment(runs: list[dict[str, Any]], evaluations: list[dict[str, Any
             coverage_known=base_cost.coverage_known,
             coverage_total=base_cost.coverage_total,
         )
+        # Count gate passes and totals
+        build_pass = build_total = lint_pass = lint_total = typecheck_pass = typecheck_total = 0
+        for r in agent_runs:
+            eval_data = eval_by_run.get(str(r.get("id", "")), {})
+            bp = eval_data.get("build_pass")
+            lp = eval_data.get("lint_pass")
+            tp = eval_data.get("typecheck_pass")
+            if bp in (0, 1, True, False):
+                build_total += 1
+                if bp in (1, True):
+                    build_pass += 1
+            if lp in (0, 1, True, False):
+                lint_total += 1
+                if lp in (1, True):
+                    lint_pass += 1
+            if tp in (0, 1, True, False):
+                typecheck_total += 1
+                if tp in (1, True):
+                    typecheck_pass += 1
         gates[agent] = {
             "acceptance_pass": successes,
             "eligible": by_agent[agent].eligible_evaluations,
+            "build_pass": build_pass,
+            "build_total": build_total,
+            "lint_pass": lint_pass,
+            "lint_total": lint_total,
+            "typecheck_pass": typecheck_pass,
+            "typecheck_total": typecheck_total,
         }
     paired: PairedSummary | None = None
     if len(agents) == 2:

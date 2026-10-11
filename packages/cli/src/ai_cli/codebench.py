@@ -448,6 +448,12 @@ def compare(
         )
     if record["status"] != "completed":
         typer.echo(f"Warning: experiment status is {record['status']}; results incomplete.")
+    # Quality gate counts
+    for agent, gates in score.quality_gates.items():
+        build = f"{gates.get('build_pass', 0)}/{gates.get('build_total', 0)}" if gates.get('build_total', 0) else "n/a"
+        lint = f"{gates.get('lint_pass', 0)}/{gates.get('lint_total', 0)}" if gates.get('lint_total', 0) else "n/a"
+        typecheck = f"{gates.get('typecheck_pass', 0)}/{gates.get('typecheck_total', 0)}" if gates.get('typecheck_total', 0) else "n/a"
+        typer.echo(f"{agent} gates: build {build}, lint {lint}, typecheck {typecheck}")
 
 
 @app.command()

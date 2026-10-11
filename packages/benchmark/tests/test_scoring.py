@@ -95,3 +95,23 @@ def test_score_experiment_end_to_end():
     assert report.by_agent["claude"].pass_rate == 1.0
     assert report.by_agent["antigravity"].pass_rate == 0.0
     assert report.paired is not None
+
+
+def test_quality_gate_counts():
+    """Test that gate counts are collected separately from acceptance."""
+    runs = [
+        _run("r1", "claude", "completed"),
+        _run("r2", "claude", "completed"),
+    ]
+    evals = [
+        {"run_id": "r1", "status": "pass", "acceptance_pass": 1, "build_pass": 1, "lint_pass": None},
+        {"run_id": "r2", "status": "pass", "acceptance_pass": 1, "build_pass": 0, "lint_pass": None},
+    ]
+    report = score_experiment(runs, evals)
+    gates = report.quality_gates["claude"]
+    assert gates["acceptance_pass"] == 2
+    assert gates["eligible"] == 2
+    assert gates["build_pass"] == 1
+    assert gates["build_total"] == 2
+    assert gates["lint_pass"] == 0
+    assert gates["lint_total"] == 0

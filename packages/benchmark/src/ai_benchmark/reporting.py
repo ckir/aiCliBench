@@ -97,10 +97,15 @@ invalid {{ paired.invalid }} (total {{ paired.total_pairs }}).</p>
 {% if cost_warning %}<div class="warning">{{ cost_warning }}</div>{% endif %}
 
 <h2>9. Quality-gate results</h2>
-<table><tr><th>Agent</th><th>Acceptance passes</th><th>Eligible</th></tr>
-{% for agent, row in correctness.items() %}
-<tr><td>{{ agent }}</td><td>{{ row.passes }}</td>
-<td>{{ row.eligible }}</td></tr>
+<table><tr><th>Agent</th><th>Acceptance</th><th>Build</th><th>Lint</th><th>Typecheck</th></tr>
+{% for agent, row in quality_gates.items() %}
+<tr>
+  <td>{{ agent }}</td>
+  <td>{{ row.acceptance_pass }}/{{ row.eligible }}</td>
+  <td>{% if row.build_total %}{{ row.build_pass }}/{{ row.build_total }}{% else %}n/a{% endif %}</td>
+  <td>{% if row.lint_total %}{{ row.lint_pass }}/{{ row.lint_total }}{% else %}n/a{% endif %}</td>
+  <td>{% if row.typecheck_total %}{{ row.typecheck_pass }}/{{ row.typecheck_total }}{% else %}n/a{% endif %}</td>
+</tr>
 {% endfor %}
 </table>
 
@@ -248,6 +253,7 @@ def render_report(
         tool_versions={k: _fmt(v) for k, v in tool_versions.items()},
         model_unknown=model_unknown,
         correctness=correctness,
+        quality_gates=score.quality_gates,
         paired=paired,
         runtime=runtime,
         errors=errors,

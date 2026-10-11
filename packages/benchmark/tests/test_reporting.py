@@ -58,7 +58,7 @@ def test_export_csv_columns_and_order():
 
 def test_html_escapes_injection():
     exp, runs, evals = _sample()
-    runs[0]["task_id"] = '<script>alert("x")</script>'
+    runs[0]["task_id"] = "<script>alert(\"x\")</script>"
     score = score_experiment(runs, evals)
     html = render_report(
         title="CodeBench <Test>",
@@ -86,6 +86,26 @@ def test_html_escapes_injection():
         "Warnings",
     ):
         assert section in html
+
+
+def test_quality_gate_section_renders_build_pass():
+    exp, runs, evals = _sample()
+    evals[0]["build_pass"] = 1
+    evals[0]["lint_pass"] = None
+    evals[0]["typecheck_pass"] = None
+    score = score_experiment(runs, evals)
+    html = render_report(
+        title="Test",
+        experiment=exp,
+        runs=runs,
+        evaluations=evals,
+        score=score,
+        tool_versions={"claude": "1.0"},
+        warnings=[],
+    )
+    assert "Build" in html
+    assert "1/1" in html
+    assert "Acceptance" in html
 
 
 def test_flatten_includes_coverage_fields():
