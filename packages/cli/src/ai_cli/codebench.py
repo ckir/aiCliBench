@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from contextlib import suppress
 from pathlib import Path
@@ -11,6 +12,7 @@ from typing import Annotated, Any
 import typer
 
 from ai_benchmark.config import resolve_config
+from ai_benchmark.docker_runner import build_image, docker_available
 from ai_benchmark.doctor import run_doctor
 from ai_benchmark.export import export_csv, export_json
 from ai_benchmark.reporting import render_report
@@ -54,6 +56,9 @@ def _load_config(config: Path | None) -> Any:
 
 
 def _tasks_root() -> Path:
+    tasks_root = os.environ.get("TASKS_ROOT")
+    if tasks_root:
+        return Path(tasks_root)
     return Path("tasks")
 
 
@@ -192,6 +197,76 @@ def tasks_validate(
         failed = failed or not result.ok
     if failed:
         raise typer.Exit(code=EXIT_TASK)
+
+
+@tasks_app.command("build")
+def tasks_build(
+    suite: Annotated[str | None, typer.Option(help="Suite name")] = None,
+    all: Annotated[bool, typer.Option(help="Build all suites")] = False,
+    config: Annotated[Path | None, typer.Option(help="Path to benchmark.toml")] = None,
+) -> None:
+    """Pre-build Docker images for all tasks in a suite (§5)."""
+    if not all and suite is None:
+        typer.echo("Specify --suite SUITE or --all.", err=True)
+        raise typer.Exit(code=EXIT_CONFIG)
+    if not docker_available():
+        typer.echo("Docker not available; cannot build images.", err=True)
+        raise typer.Exit(code=EXIT_DEPENDENCY)
+
+    _load_config(config)
+    root = _tasks_root()
+
+    suites: list[str]
+    if all:
+        suites = [p.name for p in root.iterdir() if p.is_dir()] if root.is_dir() else []
+    else:
+        if suite is None:
+            typer.echo("Specify --suite SUITE or --all.", err=True)
+            raise typer.Exit(code=EXIT_CONFIG)
+        suites = [suite]
+
+    if not suites:
+        typer.echo("No suites found.", err=True)
+        raise typer.Exit(code=EXIT_TASK)
+
+    typer.echo(f"Building images for suites: {', '.join(suites)}")
+    built_count = 0
+    skipped_count = 0
+
+    for suite_name in suites:
+        suite_dir = root / suite_name
+        if not suite_dir.is_dir():
+            typer.echo(f"Suite not found: {suite_name}", err=True)
+            continue
+
+        try:
+            tasks = discover_tasks(root, suite=suite_name)
+        except ConfigurationError as exc:
+            typer.echo(f"Cannot load suite {suite_name}: {exc}", err=True)
+            continue
+
+        for loaded in tasks:
+            task = loaded.definition
+            dockerfile_path = (loaded.task_dir / task.dockerfile).resolve()
+            if not dockerfile_path.is_file():
+                typer.echo(f"  {task.id}: SKIP (missing Dockerfile)")
+                skipped_count += 1
+                continue
+
+            typer.echo(f"  Building {task.id}...")
+            try:
+                image_tag = f"codebench-task:{task.id}"
+                build_image(
+                    dockerfile=dockerfile_path,
+                    context=loaded.task_dir.resolve(),
+                    tag=image_tag,
+                )
+                typer.echo(f"  {task.id}: BUILT ({image_tag})")
+                built_count += 1
+            except Exception as exc:
+                typer.echo(f"  {task.id}: FAILED ({exc})", err=True)
+
+    typer.echo(f"Build complete: {built_count} built, {skipped_count} skipped.")
 
 
 @app.command()
