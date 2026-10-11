@@ -11,7 +11,7 @@
   "packages/evals": "0.1.0",
   "packages/cli": "0.1.0",
   "packages/plugins/example": "0.1.0",
-  "packages/integrations/openai": "0.1.0",
+  "packages/integrations/openai": "0.2.0",
   "packages/services/api": "0.1.0",
   "packages/services/worker": "0.1.0"
 }
