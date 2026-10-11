@@ -9,8 +9,10 @@ Primary metrics (never collapsed to one opaque number):
 - Correctness: `pass_rate = acceptance_passes / eligible_evaluations`.
   Evaluation errors are excluded from the denominator and shown separately.
   Always read numerators/denominators, not just percentages.
-- `paired_win_rate`: share of valid pairs where only one agent passes; ties
-  (`both pass`, `neither passes`) and `invalid` pairs shown separately.
+  95% Wilson confidence intervals are shown for pass rates.
+- Paired outcomes: `a_wins`, `b_wins`, `both_pass`, `neither_pass`, `invalid`.
+  Decisive pairs = `a_wins + b_wins`. Exact sign-test p-value and paired
+  bootstrap 95% CI for delta(A-B) are reported when decisive pairs exist.
 - Runtime: median + IQR over successful runs only. Timeouts reported as counts
   (optionally capped elapsed shown with the cap stated), never averaged as
   completions.
@@ -19,7 +21,15 @@ Primary metrics (never collapsed to one opaque number):
   (`known/total`) labeled. Subscription plans without telemetry show
   `not available` (or a user estimate labeled as such).
 - Quality gates (acceptance, build, lint, typecheck, regression) reported
-  separately. Source similarity to a reference patch is never graded.
+  separately with `pass/total` counts. Source similarity to a reference patch
+  is never graded.
+
+Statistical confidence:
+
+- 95% Wilson score intervals for per-agent pass rates.
+- Exact two-sided sign test p-value for paired wins.
+- Paired bootstrap (2000 resamples, fixed seed 20261010) 95% CI for delta(A-B)
+  pass rate difference. Reported as `n/a` when fewer than 10 decisive pairs.
 
 Cautions:
 

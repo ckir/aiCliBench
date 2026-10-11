@@ -150,6 +150,9 @@ uv run codebench --help
 uv run codebench doctor
 uv run codebench tasks list
 uv run codebench tasks validate example-task
+uv run codebench tasks init my-task --title "Fix the bug" --category bugfix
+uv run codebench tasks materialize example-task
+uv run codebench tasks verify example-task
 uv run codebench run --task example-task --agents all --repeat 1
 uv run codebench runs list --limit 10
 uv run codebench compare --latest
