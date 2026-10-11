@@ -7,9 +7,9 @@ def test_exact_and_wildcard_matching():
     ee = EventEmitter()
     calls = []
 
-    ee.on("user.created", lambda e, uid: calls.append(("exact", uid)))
-    ee.on("user.*", lambda e, uid: calls.append(("single", uid)))
-    ee.on("user.**", lambda e, uid: calls.append(("multi", uid)))
+    ee.on("user.created", lambda uid: calls.append(("exact", uid)))
+    ee.on("user.*", lambda uid: calls.append(("single", uid)))
+    ee.on("user.**", lambda uid: calls.append(("multi", uid)))
 
     count = ee.emit("user.created", "u1")
     assert count == 3
