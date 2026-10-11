@@ -6,6 +6,7 @@ from ai_benchmark.evaluator import run_evaluation
 from ai_benchmark.fake_agent import FakeAgentAdapter
 from ai_benchmark.task_materialize import materialize_repo
 from ai_benchmark.task_registry import load_task, resolve_repository, validate_task
+from ai_benchmark.task_verify import apply_solution
 from ai_benchmark.workspace import checkout_fresh
 from ai_core.status import EvalStatus, RunStatus
 
@@ -43,29 +44,15 @@ def test_demo_original_fails_and_solution_passes(tmp_path: Path):
     )
     assert failing.status == EvalStatus.FAIL
 
-    # Fake passing agent writes the fix; evaluator must pass.
-    workspace = tmp_path / "agent-pass"
+    # Apply reference solution; evaluator must pass.
+    workspace = tmp_path / "solution"
     checkout_fresh(
         repository=repo,
         commit=loaded.definition.commit,
         dest=workspace,
         cache_dir=tmp_path / "cache",
     )
-    agent = FakeAgentAdapter(agent_name="fake", mode="pass")
-    artifact = tmp_path / "artifacts"
-    artifact.mkdir()
-    run_result = agent.run(
-        prompt=loaded.wrapped_prompt,
-        workdir=workspace,
-        stdout_path=artifact / "stdout.log",
-        stderr_path=artifact / "stderr.log",
-        events_path=artifact / "events.jsonl",
-        timeout_seconds=60,
-    )
-    from ai_agents.adapter import RunResult
-
-    assert isinstance(run_result, RunResult)
-    assert run_result.status == RunStatus.COMPLETED
+    apply_solution(DEMO_DIR, workspace)
     passing = run_evaluation(
         snapshot_dir=workspace,
         evaluator_dir=evaluator_dir,
@@ -85,6 +72,8 @@ def test_demo_original_fails_and_solution_passes(tmp_path: Path):
         cache_dir=tmp_path / "cache",
     )
     bad = FakeAgentAdapter(agent_name="fake", mode="fail")
+    artifact = tmp_path / "artifacts"
+    artifact.mkdir()
     bad.run(
         prompt=loaded.wrapped_prompt,
         workdir=workspace2,

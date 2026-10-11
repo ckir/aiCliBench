@@ -1,15 +1,7 @@
-# Reference solution (for validators, never shown to agents)
+# Reference Solution for example-task
 
-The bug is in `calc.py`: `add` subtracts. The fix:
+This directory contains the fixed version of the buggy code.
 
-```python
-def add(a, b):
-    return a + b
-```
+## Files
 
-Validation procedure:
-
-1. Generate the demo repo from `source/` with fixed git identity/dates.
-2. Confirm the starting commit fails `evaluator/run_tests.sh`.
-3. Apply the fix above.
-4. Confirm `evaluator/run_tests.sh` exits 0.
+- `calc.py` - The fixed `add` function that correctly adds two numbers instead of subtracting.

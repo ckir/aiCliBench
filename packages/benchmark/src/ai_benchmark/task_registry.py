@@ -123,6 +123,22 @@ def resolve_repository(task_dir: Path, repository: str) -> str:
     return str((task_dir / repository).resolve())
 
 
+def resolve_evaluator_command(command: list[str], evaluator_dir: Path) -> list[str]:
+    """Map container-style `/evaluator/...` paths to the host evaluator dir (local mode)."""
+    resolved: list[str] = []
+    evaluator_dir = evaluator_dir.resolve()
+    for part in command:
+        if part == "/evaluator/run_tests.sh":
+            candidate = evaluator_dir / "run_tests.sh"
+            resolved.append(str(candidate) if candidate.is_file() else part)
+        elif part.startswith("/evaluator/"):
+            candidate = evaluator_dir / part[len("/evaluator/") :]
+            resolved.append(str(candidate) if candidate.exists() else part)
+        else:
+            resolved.append(part)
+    return resolved
+
+
 def validate_task(
     task_dir: Path, *, check_repo: bool = True, check_docker: bool = False
 ) -> TaskValidation:
@@ -197,6 +213,11 @@ def validate_task(
         dockerfile = task_dir / definition.dockerfile
         if not dockerfile.is_file():
             errors.append(f"Dockerfile missing: {dockerfile}")
+
+    # Check for solution overlay (warning only, not required for all tasks)
+    solution_dir = task_dir / "solution" / "files"
+    if not solution_dir.is_dir():
+        warnings.append("solution/files/ missing; tasks verify cannot run")
 
     ok = not errors
     return TaskValidation(task_id=task_id, ok=ok, errors=tuple(errors), warnings=tuple(warnings))
