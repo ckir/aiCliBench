@@ -8,7 +8,7 @@ dependencies = [
   "ai-core",
   "ai-runtime",
   "ai-plugin-example",
-  "pydantic>=2",
+  "pydantic>=2.14.1",
 ]
 
 [build-system]

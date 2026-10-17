@@ -7,7 +7,7 @@ dependencies = [
   "ai-plugins-sdk",
   "ai-schemas",
   "ai-core",
-  "pydantic>=2",
+  "pydantic>=2.14.1",
 ]
 
 [build-system]

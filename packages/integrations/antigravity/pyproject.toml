@@ -7,7 +7,7 @@ dependencies = [
   "ai-core",
   "ai-schemas",
   "ai-agents",
-  "pydantic>=2",
+  "pydantic>=2.14.1",
 ]
 
 [build-system]

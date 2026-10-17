@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
   "ai-core",
   "ai-schemas",
-  "pydantic>=2",
+  "pydantic>=2.14.1",
 ]
 
 [build-system]
