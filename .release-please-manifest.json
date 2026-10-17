@@ -9,7 +9,7 @@
   "packages/mcp-server": "0.1.0",
   "packages/mcp-testing": "0.2.0",
   "packages/evals": "0.1.0",
-  "packages/cli": "0.1.0",
+  "packages/cli": "0.2.0",
   "packages/plugins/example": "0.2.0",
   "packages/integrations/openai": "0.1.0",
   "packages/integrations/generic-cli": "0.2.0",
