@@ -101,7 +101,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-core"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/core" }
 
 [[package]]
@@ -167,7 +167,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-integration-generic-cli"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/integrations/generic-cli" }
 dependencies = [
     { name = "ai-agents" },
@@ -209,7 +209,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-mcp-client"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/mcp-client" }
 dependencies = [
     { name = "ai-core" },
@@ -260,7 +260,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-mcp-testing"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/mcp-testing" }
 dependencies = [
     { name = "ai-core" },
@@ -346,7 +346,7 @@ dev = [
 
 [[package]]
 name = "ai-plugin-example"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/plugins/example" }
 dependencies = [
     { name = "ai-core" },
@@ -365,7 +365,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-plugins-sdk"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/plugins-sdk" }
 dependencies = [
     { name = "ai-core" },
@@ -380,7 +380,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-runtime"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/ai" }
 dependencies = [
     { name = "ai-core" },
@@ -435,7 +435,7 @@ requires-dist = [
 
 [[package]]
 name = "ai-service-worker"
-version = "0.1.0"
+version = "0.2.0"
 source = { editable = "packages/services/worker" }
 dependencies = [
     { name = "ai-agents" },
