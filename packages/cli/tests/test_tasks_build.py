@@ -1,11 +1,22 @@
 """Tests for `codebench tasks build` command (docker calls are patched out)."""
 
+import re
 from pathlib import Path
 from unittest.mock import patch
 
 from typer.testing import CliRunner
 
 from ai_cli.codebench import app
+
+
+def _clean(output: str) -> str:
+    """Strip ANSI escapes from captured CLI output.
+
+    Typer forces Rich into terminal mode when GITHUB_ACTIONS, FORCE_COLOR, or
+    PY_COLORS is set (e.g. on GitHub Actions runners), which interleaves escape
+    sequences inside rendered tokens such as ``--suite``.
+    """
+    return re.sub(r"\x1b\[[0-9;]*m", "", output)
 
 
 def _make_task(root: Path, task_id: str = "example-task", suite: str = "pilot") -> Path:
@@ -48,9 +59,10 @@ def test_tasks_build_help():
     runner = CliRunner()
     result = runner.invoke(app, ["tasks", "build", "--help"])
     assert result.exit_code == 0
-    assert "build" in result.output.lower()
-    assert "--suite" in result.output
-    assert "--all" in result.output
+    output = _clean(result.output)
+    assert "build" in output.lower()
+    assert "--suite" in output
+    assert "--all" in output
 
 
 def test_tasks_build_requires_suite_or_all():
