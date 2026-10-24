@@ -69,8 +69,8 @@ exclude = [
 dev = [
   "pytest>=8",
   "pytest-cov>=5",
-  "ruff>=0.17.0",
-  "ty>=0.0.87",
+  "ruff>=0.17.1",
+  "ty>=0.0.90",
   "httpx>=0.27",
   "pydantic>=2.14.1",
 ]
