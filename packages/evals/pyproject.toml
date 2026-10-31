@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "AI evaluation framework"
 requires-python = ">=3.12"
 dependencies = [
-  "pytest>=8",
+  "pytest>=9.2.0",
   "ai-runtime",
   "ai-schemas",
   "ai-core",
