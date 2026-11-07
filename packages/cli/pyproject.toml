@@ -13,7 +13,7 @@ dependencies = [
   "ai-integration-claude-code",
   "ai-integration-antigravity",
   "ai-integration-generic-cli",
-  "pydantic>=2.14.1",
+  "pydantic>=2.14.2",
   "typer>=0.9",
 ]
 
