@@ -9,7 +9,7 @@ dependencies = [
   "ai-plugins-sdk",
   "ai-plugin-example",
   "ai-mcp-server",
-  "pydantic>=2.14.2",
+  "pydantic>=2.14.3",
 ]
 
 [build-system]
