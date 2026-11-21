@@ -14,7 +14,7 @@ dependencies = [
   "ai-integration-antigravity",
   "ai-integration-generic-cli",
   "pydantic>=2.14.3",
-  "typer>=0.9",
+  "typer>=0.29.2",
 ]
 
 [build-system]
